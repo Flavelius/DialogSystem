@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfDialog xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.datacontract.org/2004/07/DialogSystem">
+  <Dialog z:Id="i1" xmlns:z="http://schemas.microsoft.com/2003/10/Serialization/">
+    <ID>0</ID>
+    <Npc>TestNPC</Npc>
+    <Options>
+      <DialogOption>
+        <IsRedirection>false</IsRedirection>
+        <NextDialog z:Id="i2">
+          <ID>1</ID>
+          <Npc>TestNPC</Npc>
+          <Options>
+            <DialogOption>
+              <IsRedirection>false</IsRedirection>
+              <NextDialog i:nil="true" />
+              <Notifications />
+              <Text xmlns:d8p1="http://schemas.datacontract.org/2004/07/Localization">
+                <d8p1:Description>End Conversation</d8p1:Description>
+                <d8p1:Strings>
+                  <d8p1:LanguageString>
+                    <d8p1:Language>EN_Default</d8p1:Language>
+                    <d8p1:Text>End conversation</d8p1:Text>
+                  </d8p1:LanguageString>
+                  <d8p1:LanguageString>
+                    <d8p1:Language>DE</d8p1:Language>
+                    <d8p1:Text>Konversation beenden</d8p1:Text>
+                  </d8p1:LanguageString>
+                </d8p1:Strings>
+              </Text>
+            </DialogOption>
+          </Options>
+          <Requirements xmlns:d6p1="http://schemas.datacontract.org/2004/07/">
+            <d6p1:DialogRequirement>
+              <d6p1:FloatValue>0</d6p1:FloatValue>
+              <d6p1:IntValue>0</d6p1:IntValue>
+              <d6p1:StringValue></d6p1:StringValue>
+              <d6p1:Target>Npc</d6p1:Target>
+              <d6p1:Type>Flag</d6p1:Type>
+            </d6p1:DialogRequirement>
+          </Requirements>
+          <Tag>d56e219e</Tag>
+          <Text xmlns:d6p1="http://schemas.datacontract.org/2004/07/Localization">
+            <d6p1:Description>TestText2</d6p1:Description>
+            <d6p1:Strings>
+              <d6p1:LanguageString>
+                <d6p1:Language>EN_Default</d6p1:Language>
+                <d6p1:Text>EText2</d6p1:Text>
+              </d6p1:LanguageString>
+              <d6p1:LanguageString>
+                <d6p1:Language>DE</d6p1:Language>
+                <d6p1:Text>DText2</d6p1:Text>
+              </d6p1:LanguageString>
+            </d6p1:Strings>
+          </Text>
+          <Title xmlns:d6p1="http://schemas.datacontract.org/2004/07/Localization">
+            <d6p1:Description>TestTitle2</d6p1:Description>
+            <d6p1:Strings>
+              <d6p1:LanguageString>
+                <d6p1:Language>EN_Default</d6p1:Language>
+                <d6p1:Text>ETitle2</d6p1:Text>
+              </d6p1:LanguageString>
+              <d6p1:LanguageString>
+                <d6p1:Language>DE</d6p1:Language>
+                <d6p1:Text>DTitel2</d6p1:Text>
+              </d6p1:LanguageString>
+            </d6p1:Strings>
+          </Title>
+        </NextDialog>
+        <Notifications />
+        <Text xmlns:d5p1="http://schemas.datacontract.org/2004/07/Localization">
+          <d5p1:Description>GoToTest2</d5p1:Description>
+          <d5p1:Strings>
+            <d5p1:LanguageString>
+              <d5p1:Language>EN_Default</d5p1:Language>
+              <d5p1:Text>Go to test 2</d5p1:Text>
+            </d5p1:LanguageString>
+            <d5p1:LanguageString>
+              <d5p1:Language>DE</d5p1:Language>
+              <d5p1:Text>Gehe zu Test 2</d5p1:Text>
+            </d5p1:LanguageString>
+          </d5p1:Strings>
+        </Text>
+      </DialogOption>
+    </Options>
+    <Requirements xmlns:d3p1="http://schemas.datacontract.org/2004/07/" />
+    <Tag>4bf7d2fc</Tag>
+    <Text xmlns:d3p1="http://schemas.datacontract.org/2004/07/Localization">
+      <d3p1:Description>TestText1</d3p1:Description>
+      <d3p1:Strings>
+        <d3p1:LanguageString>
+          <d3p1:Language>EN_Default</d3p1:Language>
+          <d3p1:Text>EText</d3p1:Text>
+        </d3p1:LanguageString>
+        <d3p1:LanguageString>
+          <d3p1:Language>DE</d3p1:Language>
+          <d3p1:Text>DText</d3p1:Text>
+        </d3p1:LanguageString>
+      </d3p1:Strings>
+    </Text>
+    <Title xmlns:d3p1="http://schemas.datacontract.org/2004/07/Localization">
+      <d3p1:Description>TestTitle1</d3p1:Description>
+      <d3p1:Strings>
+        <d3p1:LanguageString>
+          <d3p1:Language>EN_Default</d3p1:Language>
+          <d3p1:Text>ETitle</d3p1:Text>
+        </d3p1:LanguageString>
+        <d3p1:LanguageString>
+          <d3p1:Language>DE</d3p1:Language>
+          <d3p1:Text>DTitel</d3p1:Text>
+        </d3p1:LanguageString>
+      </d3p1:Strings>
+    </Title>
+  </Dialog>
+</ArrayOfDialog>
