@@ -267,14 +267,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52eb066dca73bee47bc17d5852227c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  npcName: TestNPC
+  conversationEngine: {fileID: 2061911256}
   language: 0
-  intValue: 0
-  stringValue: 
-  floatValue: 0
-  npcInt: 0
-  npcString: 
-  npcFloat: 0
-  worldInt: 0
-  worldString: 
-  worldFloat: 0
+  npc:
+    intValue: 0
+    stringValue: 
+    floatValue: 0
+  player:
+    intValue: 0
+    stringValue: 
+    floatValue: 0
+  world:
+    intValue: 0
+    stringValue: 
+    floatValue: 0

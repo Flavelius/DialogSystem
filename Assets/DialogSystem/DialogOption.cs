@@ -16,6 +16,7 @@ namespace DialogSystem
         public DialogOption(string title)
         {
             text = new LocalizedString(title);
+            tag = "";
         }
 
         [SerializeField, HideInInspector]
@@ -34,6 +35,15 @@ namespace DialogSystem
                 return "Not Set";
             }
             return text.GetString(language, fallback, fallbackLanguage);
+        }
+
+        [SerializeField, HideInInspector]
+        private string tag = "";
+        [DataMember]
+        public string Tag
+        {
+            get { return tag??""; }
+            set { tag = value; }
         }
 
         [SerializeField, HideInInspector]

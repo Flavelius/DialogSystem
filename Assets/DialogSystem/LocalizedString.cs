@@ -158,6 +158,7 @@ namespace Localization
                 {
                     editLanguageString = target.Strings[i];
                 }
+                GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Remove"))
                 {
                     removeIndex = i;

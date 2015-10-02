@@ -9,7 +9,16 @@ public enum DialogRequirementType
     Flag = 7,
     LifeTime = 8,
     EventLog = 9,
-    DialogLog = 10
+    DialogLog = 10,
+    TaskLog = 11
+}
+
+public interface IDialogRequirement
+{
+    DialogRequirementType Type { get; }
+    int IntValue { get; }
+    string StringValue { get; }
+    float FloatValue { get; }
 }
 
 public enum DialogRequirementTarget

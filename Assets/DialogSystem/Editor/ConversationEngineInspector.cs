@@ -3,13 +3,13 @@ using UnityEditor;
 using System.Collections;
 
 [CustomEditor(typeof(ConversationEngine))]
-public class ConversationEngineInspector : Editor 
+public class ConversationEngineInspector : Editor
 {
     public override void OnInspectorGUI()
     {
         ConversationEngine engine = target as ConversationEngine;
         engine.SavedDialogs = EditorGUILayout.ObjectField(new GUIContent("Saved Dialogs"), engine.SavedDialogs, typeof(TextAsset), false) as TextAsset;
-        engine.fallback = (Localization.LocalizationFallback)EditorGUILayout.EnumPopup("Fallback:",engine.fallback);
+        engine.fallback = (Localization.LocalizationFallback)EditorGUILayout.EnumPopup("Fallback:", engine.fallback);
         if (engine.fallback == Localization.LocalizationFallback.Language)
         {
             engine.fallbackLanguage = (Localization.Language)EditorGUILayout.EnumPopup("Fallback language:", engine.fallbackLanguage);

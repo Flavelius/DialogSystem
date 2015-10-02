@@ -2,18 +2,17 @@
 <ArrayOfDialog xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.datacontract.org/2004/07/DialogSystem">
   <Dialog z:Id="i1" xmlns:z="http://schemas.microsoft.com/2003/10/Serialization/">
     <ID>0</ID>
-    <Npc>TestNPC</Npc>
     <Options>
       <DialogOption>
         <IsRedirection>false</IsRedirection>
         <NextDialog z:Id="i2">
           <ID>1</ID>
-          <Npc>TestNPC</Npc>
           <Options>
             <DialogOption>
               <IsRedirection>false</IsRedirection>
               <NextDialog i:nil="true" />
               <Notifications />
+              <Tag></Tag>
               <Text xmlns:d8p1="http://schemas.datacontract.org/2004/07/Localization">
                 <d8p1:Description>End Conversation</d8p1:Description>
                 <d8p1:Strings>
@@ -67,6 +66,7 @@
           </Title>
         </NextDialog>
         <Notifications />
+        <Tag></Tag>
         <Text xmlns:d5p1="http://schemas.datacontract.org/2004/07/Localization">
           <d5p1:Description>GoToTest2</d5p1:Description>
           <d5p1:Strings>
@@ -109,6 +109,31 @@
           <d3p1:Text>DTitel</d3p1:Text>
         </d3p1:LanguageString>
       </d3p1:Strings>
+    </Title>
+  </Dialog>
+  <Dialog z:Id="i3" xmlns:z="http://schemas.microsoft.com/2003/10/Serialization/">
+    <ID>2</ID>
+    <Options>
+      <DialogOption>
+        <IsRedirection>false</IsRedirection>
+        <NextDialog i:nil="true" />
+        <Notifications />
+        <Tag></Tag>
+        <Text xmlns:d5p1="http://schemas.datacontract.org/2004/07/Localization">
+          <d5p1:Description>End Conversation</d5p1:Description>
+          <d5p1:Strings />
+        </Text>
+      </DialogOption>
+    </Options>
+    <Requirements xmlns:d3p1="http://schemas.datacontract.org/2004/07/" />
+    <Tag></Tag>
+    <Text xmlns:d3p1="http://schemas.datacontract.org/2004/07/Localization">
+      <d3p1:Description>Not Set</d3p1:Description>
+      <d3p1:Strings />
+    </Text>
+    <Title xmlns:d3p1="http://schemas.datacontract.org/2004/07/Localization">
+      <d3p1:Description>Not Set</d3p1:Description>
+      <d3p1:Strings />
     </Title>
   </Dialog>
 </ArrayOfDialog>

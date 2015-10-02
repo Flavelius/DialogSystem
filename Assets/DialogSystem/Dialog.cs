@@ -6,12 +6,13 @@ using System.Xml;
 using System.Runtime.Serialization;
 using Localization;
 
-namespace DialogSystem 
+namespace DialogSystem
 {
-    [DataContract(Name="Dialog", IsReference=true)]
+
+    [DataContract(Name = "Dialog", IsReference = true)]
     public class Dialog
     {
-        public Dialog():this(false) { }
+        public Dialog() : this(false) { }
 
         public Dialog(bool isEditor)
         {
@@ -21,6 +22,12 @@ namespace DialogSystem
             {
                 options.Add(new DialogOption("End Conversation"));
             }
+        }
+
+        public enum DialogRequirementMode
+        {
+            And,
+            Or
         }
 
         [SerializeField, HideInInspector]
@@ -73,17 +80,8 @@ namespace DialogSystem
         [DataMember]
         public string Tag
         {
-            get { return tag; }
+            get { return tag??""; }
             set { tag = value; }
-        }
-
-        [SerializeField, HideInInspector]
-        private string npc;
-        [DataMember]
-        public string Npc
-        {
-            get { return npc; }
-            set { npc = value; }
         }
 
         [SerializeField, HideInInspector]
@@ -96,6 +94,15 @@ namespace DialogSystem
         }
 
         [SerializeField, HideInInspector]
+        private DialogRequirementMode requirementMode = DialogRequirementMode.And;
+        public DialogRequirementMode RequirementMode
+        {
+            get { return requirementMode; }
+            set { requirementMode = value; }
+        }
+
+
+        [SerializeField, HideInInspector]
         private List<DialogRequirement> requirements = new List<DialogRequirement>();
         [DataMember]
         public List<DialogRequirement> Requirements
@@ -104,19 +111,38 @@ namespace DialogSystem
             set { requirements = value; }
         }
 
-        internal bool MeetsRequirements(IConversationRelevance target)
+        public bool MeetsRequirements(IConversationRelevance target)
         {
-            for (int i = 0; i < requirements.Count; i++)
+            if (requirementMode == DialogRequirementMode.And)
             {
-                if (requirements[i].Target == target.Type)
+                for (int i = 0; i < requirements.Count; i++)
                 {
+                    if (requirements[i].Target != target.Type)
+                    {
+                        continue;
+                    }
                     if (!target.ValidateDialogRequirement(requirements[i]))
                     {
                         return false;
                     }
                 }
+                return true;
             }
-            return true;
+            else if (requirementMode == DialogRequirementMode.Or)
+            {
+                for (int i = 0; i < requirements.Count; i++)
+                {
+                    if (requirements[i].Target != target.Type)
+                    {
+                        continue;
+                    }
+                    if (target.ValidateDialogRequirement(requirements[i]))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 }

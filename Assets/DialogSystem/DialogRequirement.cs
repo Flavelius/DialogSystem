@@ -4,6 +4,7 @@ using UnityEngine;
 [DataContract]
 public class DialogRequirement: IDialogRequirement
 {
+
     [SerializeField, HideInInspector]
     private DialogRequirementType type = DialogRequirementType.State;
     [DataMember]

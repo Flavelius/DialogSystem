@@ -7,7 +7,7 @@ using System.Xml;
 using UnityEngine;
 using Localization;
 
-public class ConversationEngine : MonoBehaviour, IConversationEngine
+public class ConversationEngine : MonoBehaviour
 {
 
     [SerializeField, HideInInspector]
@@ -18,7 +18,14 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
         set { savedDialogs = value; }
     }
 
+    /// <summary>
+    /// What to do, when a dialog has no -, or doesn't contain text in the requested language
+    /// </summary>
     public LocalizationFallback fallback = LocalizationFallback.DebugOutput;
+
+    /// <summary>
+    /// What language to resort to, when the supplied one yields no results, if <see cref="fallback"/> is set to language
+    /// </summary>
     public Language fallbackLanguage = Language.EN_Default;
 
     /// <summary>
@@ -32,47 +39,18 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
     [SerializeField]
     public LocalizedString EndConversationFallback = new LocalizedString("End Conversation");
 
-    private static IConversationEngine instance;
-    private static IConversationEngine dummyInstance;
-    public static IConversationEngine Instance
-    {
-        get
-        {
-            if (instance == null)
-            {
-                Debug.Log("Missing ConversationEngine instance");
-                if (dummyInstance == null) { dummyInstance = new ConversationEngineDummy(); }
-                return dummyInstance;
-            }
-            return instance;
-        }
-    }
-
-    private Dictionary<string, List<Dialog>> conversations = new Dictionary<string, List<Dialog>>();
+    /// <summary>
+    /// all loaded conversations are stored here
+    /// </summary>
+    private List<Dialog> conversations = new List<Dialog>();
 
     void Awake()
     {
         Initialize();
     }
 
-    void OnDestroy()
+    private void Initialize()
     {
-        if (instance == this)
-        {
-            instance = null;
-        }
-    }
-
-    public void Initialize()
-    {
-        if (instance != null && instance != this)
-        {
-            Destroy(this);
-        }
-        else
-        {
-            instance = this;
-        }
         if (savedDialogs == null)
         {
             Debug.LogWarning("Dialogs-file not specified, no dialogs will be available");
@@ -81,6 +59,10 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
         LoadDialogs(savedDialogs);
     }
 
+    /// <summary>
+    /// Loads all saved dialogs from the specified save file
+    /// </summary>
+    /// <returns>returns true if loading was successful</returns>
     public bool LoadDialogs(TextAsset asset)
     {
         try
@@ -92,7 +74,8 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
                 List<Dialog> lst = deserializer.ReadObject(stream) as List<Dialog>;
                 if (lst != null)
                 {
-                    PrepareConversations(lst);
+                    //PrepareConversations(lst);
+                    conversations = lst;
                     return true;
                 }
                 else 
@@ -109,29 +92,81 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
         }
     }
 
-    List<Conversation> IConversationEngine.GetAvailableTopics(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, Language language)
+    /// <summary>
+    /// Requests a list of topics
+    /// </summary>
+    /// <param name="npc">Required, reference to the topics owning npc</param>
+    /// <param name="player">Required, reference to the conversing player</param>
+    /// <param name="worldInfo">Not required, but could be, depending on the settings of certain dialogs</param>
+    /// <param name="language">The language the conversing player should receive an answer in</param>
+    /// <returns></returns>
+    public Conversation GetAvailableTopics(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, Language language)
     {
-        List<Dialog> npcTopics;
-        List<Conversation> availableTopics = new List<Conversation>();
-        if (conversations.TryGetValue(npc.Name, out npcTopics))
+        //List<Conversation> availableTopics = new List<Conversation>();
+        List<Dialog> availableTopics = new List<Dialog>();
+        for (int i = 0; i < conversations.Count; i++)
         {
-            for (int i = 0; i < npcTopics.Count; i++)
+            if (CheckAvailability(conversations[i], npc, player, worldInfo))
             {
-                if (CheckAvailability(npcTopics[i], npc, player, worldInfo))
-                {
-                    string title = npcTopics[i].GetTitle(language, fallback, fallbackLanguage);
-                    string text = npcTopics[i].GetText(language, fallback, fallbackLanguage);
-                    availableTopics.Add(new Conversation(npcTopics[i].ID, npcTopics[i].Npc, title, text, GetAvailableAnswers(npcTopics[i], npc, player, worldInfo, language)));
-                }
+                //string title = conversations[i].GetTitle(language, fallback, fallbackLanguage);
+                //string text = conversations[i].GetText(language, fallback, fallbackLanguage);
+                //availableTopics.Add(new Conversation(conversations[i].ID, title, text, conversations[i].Tag, GetAvailableAnswers(conversations[i], npc, player, worldInfo, language)));
+                availableTopics.Add(conversations[i]);
             }
-
         }
-        return availableTopics;
+        if (availableTopics.Count == 1)
+        {
+            string title = conversations[0].GetTitle(language, fallback, fallbackLanguage);
+            string text = conversations[0].GetText(language, fallback, fallbackLanguage);
+            return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldInfo, language));
+        }
+        else if (availableTopics.Count > 1)
+        {
+            Conversation c = new Conversation(-1, "", "", "", Conversation.ConversationType.TopicList, new List<Conversation.Answer>());
+            foreach (Dialog d in availableTopics)
+            {
+                string title = d.GetTitle(language, fallback, fallbackLanguage);
+                Conversation.Answer ca = new Conversation.Answer(d.ID, title, d.Tag);
+                c.Answers.Add(ca);
+            }
+            return c;
+        }
+        return null;
+        //return availableTopics;
     }
 
-    Conversation IConversationEngine.Answer(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, int dialogID, int answerIndex, Language language)
+    /// <summary>
+    /// Retrieves the topic following the supplied answer from a previous topic
+    /// </summary>
+    /// <param name="npc">Required, reference to the topics owning npc</param>
+    /// <param name="player">Required, reference to the conversing player</param>
+    /// <param name="worldInfo">Not required, but could be, depending on the settings of certain dialogs</param>
+    /// <param name="dialogID">The id, of the dialog that is answered, or -1 if answer came from topicList</param>
+    /// <param name="answerIndex">The index of the answer of the answered dialog, or dialogID if answer came from topicList</param>
+    /// <param name="language">The language the conversing player should receive an answer in</param>
+    /// <returns></returns>
+    public Conversation Answer(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, int dialogID, int answerIndex, Language language)
     {
-        Dialog activeDialog = GetDialog(npc, dialogID);
+        Dialog activeDialog = null;
+        if (dialogID == -1)
+        {
+            activeDialog = GetDialog(npc, answerIndex);
+            if (activeDialog == null || !CheckAvailability(activeDialog, npc, player, worldInfo))
+            {
+                Debug.LogWarning("Selection from topicList invalid");
+                return null;
+            }
+            else
+            {
+                string title = activeDialog.GetTitle(language, fallback, fallbackLanguage);
+                string text = activeDialog.GetText(language, fallback, fallbackLanguage);
+                return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldInfo, language));
+            }
+        }
+        else
+        {
+            activeDialog = GetDialog(npc, dialogID);
+        }
         if (activeDialog == null) { return null; }
         if (answerIndex >= 0 && answerIndex < activeDialog.Options.Count)
         {
@@ -146,7 +181,7 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
                 {
                     string title = chosenOption.NextDialog.GetTitle(language, fallback, fallbackLanguage);
                     string text = chosenOption.NextDialog.GetText(language, fallback, fallbackLanguage);
-                    return new Conversation(chosenOption.NextDialog.ID, chosenOption.NextDialog.Npc, title, text, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldInfo, language));
+                    return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldInfo, language));
                 }
             }
         }
@@ -158,47 +193,14 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
         return null;
     }
 
-    private void PrepareConversations(List<Dialog> dialogTrees)
-    {
-        List<string> npcs = new List<string>();
-        for (int i = 0; i < dialogTrees.Count; i++)
-        {
-            if (!npcs.Contains(dialogTrees[i].Npc))
-            {
-                npcs.Add(dialogTrees[i].Npc);
-            }
-        }
-        for (int i = 0; i < npcs.Count; i++)
-        {
-            conversations.Add(npcs[i], GetAllTopics(dialogTrees, npcs[i]));
-        }
-    }
-
-    private List<Dialog> GetAllTopics(List<Dialog> dialogCollection, string npc)
-    {
-        List<Dialog> dialogs = new List<Dialog>();
-        for (int i = 0; i < dialogCollection.Count; i++)
-        {
-            if (dialogCollection[i].Npc.Equals(npc, StringComparison.OrdinalIgnoreCase))
-            {
-                dialogs.Add(dialogCollection[i]);
-            }
-        }
-        return dialogs;
-    }
-
     private Dialog GetDialog(IConversationRelevance npc, int id)
     {
-        List<Dialog> topics = new List<Dialog>();
-        if (conversations.TryGetValue(npc.Name, out topics))
+        for (int i = 0; i < conversations.Count; i++)
         {
-            for (int i = 0; i < topics.Count; i++)
+            Dialog d = FindDialog(conversations[i], id);
+            if (d != null)
             {
-                Dialog d = FindDialog(topics[i], id);
-                if (d != null)
-                {
-                    return d;
-                }
+                return d;
             }
         }
         return null;
@@ -231,7 +233,10 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
     {
         if (!d.MeetsRequirements(npc)) { return false; }
         if (!d.MeetsRequirements(player)) { return false; }
-        if (!d.MeetsRequirements(worldInfo)) { return false; }
+        if (worldInfo != null)
+        {
+            if (!d.MeetsRequirements(worldInfo)) { return false; }
+        }
         return true;
     }
 
@@ -243,72 +248,53 @@ public class ConversationEngine : MonoBehaviour, IConversationEngine
             if (d.Options[i].NextDialog == null)
             {
                 string text = d.Options[i].GetText(language, fallback, fallbackLanguage);
-                answers.Add(new Conversation.Answer(i, text));
+                answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
             } 
             else if (CheckAvailability(d.Options[i].NextDialog, npc, player, worldInfo))
             {
                 string text = d.Options[i].GetText(language, fallback, fallbackLanguage);
-                answers.Add(new Conversation.Answer(i, text));
+                answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
             }
         }
         if (answers.Count == 0 && UseEndConversationfallback)
         {
-            answers.Add(new Conversation.Answer(-1, EndConversationFallback.GetString(language, fallback, fallbackLanguage)));
+            answers.Add(new Conversation.Answer(-1, EndConversationFallback.GetString(language, fallback, fallbackLanguage), ""));
         }
         return answers;
     }
 
-    private class ConversationEngineDummy:IConversationEngine
-    {
-
-        public List<Conversation> GetAvailableTopics(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, Language language = Language.EN_Default)
-        {
-            return new List<Conversation>();
-        }
-
-        public Conversation Answer(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, int dialogID, int answerIndex, Language language = Language.EN_Default)
-        {
-            return null;
-        }
-
-        public bool LoadDialogs(TextAsset asset)
-        {
-            return false;
-        }
-    }
-
-}
-
-public interface IConversationEngine
-{
-    List<Conversation> GetAvailableTopics(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, Language language);
-    Conversation Answer(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, int dialogID, int answerIndex, Language language);
-    bool LoadDialogs(TextAsset asset);
 }
 
 public class Conversation
 {
-    public Conversation(int id, string npc, string title, string text, List<Answer> answers)
+    public enum ConversationType { Single, TopicList }
+    public Conversation(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
     {
         ID = id;
         Title = title;
         Text = text;
+        Tag = tag;
         Answers = answers;
+        Type = type;
     }
     public readonly int ID;
     public readonly string Npc;
     public readonly string Title;
     public readonly string Text;
+    public readonly string Tag;
     public readonly List<Answer> Answers;
+    public readonly ConversationType Type;
 
     public class Answer
     {
-        public Answer(int index, string text)
+        public Answer(int index, string text, string tag)
         {
             Index = index;
             Text = text;
+            Tag = tag;
         }
         public readonly int Index;
         public readonly string Text;
+        public readonly string Tag;
     }
 }
