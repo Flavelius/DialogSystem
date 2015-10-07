@@ -13,11 +13,11 @@ namespace DialogSystem
         Other
     }
 
+    [System.Serializable]
     public class DialogOptionNotification: IDialogNotification
     {
         [SerializeField, HideInInspector]
         private DialogNotificationType type = DialogNotificationType.DialogCompleted;
-        [DataMember]
         public DialogNotificationType Type
         {
             get { return type; }
@@ -26,7 +26,6 @@ namespace DialogSystem
 
         [SerializeField, HideInInspector]
         private string paramValue = "";
-        [DataMember(Name = "value")]
         public string Value
         {
             get { return paramValue; }
@@ -35,7 +34,6 @@ namespace DialogSystem
 
         [SerializeField, HideInInspector]
         private DialogNotificationTarget target = DialogNotificationTarget.Player;
-        [DataMember]
         public DialogNotificationTarget Target
         {
             get { return target; }
@@ -45,7 +43,6 @@ namespace DialogSystem
 
         [SerializeField, HideInInspector]
         private string targetName = "";
-        [DataMember(Name = "target")]
         public string TargetName
         {
             get { return targetName; }
@@ -75,6 +72,19 @@ namespace DialogSystem
                     rec.OnDialogNotification(player, npc, this);
                     break;
             }
+        }
+
+        public string ShortIdentifier
+        {
+            get
+            {
+                return string.Format("{0}{1}", target.ToString()[0], type.ToString()[0]);
+            }
+        }
+
+        public Color GetColor()
+        {
+            return new Color((int)target * 0.4f, (int)type * 0.4f, (int)type * 0.4f, 1f);
         }
     }
 }

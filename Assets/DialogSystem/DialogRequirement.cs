@@ -1,13 +1,11 @@
 ﻿using System.Runtime.Serialization;
 using UnityEngine;
 
-[DataContract]
+[System.Serializable]
 public class DialogRequirement: IDialogRequirement
 {
-
     [SerializeField, HideInInspector]
     private DialogRequirementType type = DialogRequirementType.State;
-    [DataMember]
     public DialogRequirementType Type
     {
         get { return type; }
@@ -16,7 +14,6 @@ public class DialogRequirement: IDialogRequirement
 
     [SerializeField, HideInInspector]
     private DialogRequirementTarget target = DialogRequirementTarget.Npc;
-    [DataMember]
     public DialogRequirementTarget Target
     {
         get { return target; }
@@ -25,7 +22,6 @@ public class DialogRequirement: IDialogRequirement
 
     [SerializeField, HideInInspector]
     private int intValue = 0;
-    [DataMember]
     public int IntValue
     {
         get { return intValue; }
@@ -34,7 +30,6 @@ public class DialogRequirement: IDialogRequirement
 
     [SerializeField, HideInInspector]
     private float floatValue = 0;
-    [DataMember]
     public float FloatValue
     {
         get { return floatValue; }
@@ -44,7 +39,6 @@ public class DialogRequirement: IDialogRequirement
 
     [SerializeField, HideInInspector]
     private string stringValue = "";
-    [DataMember]
     public string StringValue
     {
         get { return stringValue; }

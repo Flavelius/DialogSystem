@@ -10,16 +10,14 @@ using DialogSystem;
 
 public class DialogEditor : EditorWindow
 {
-
-    private static DialogEditor window;
-    private static ConversationEngine source;
+    public DialogCollection sourceCollection;
 
     private GUIStyle headerStyle;
     private Color inspectorColor;
     private GUIStyle buttonStyle;
     private GUIStyle lblStyle;
 
-    private List<Dialog> dialogCollection = new List<Dialog>();
+    private const string txtNotSetMsg = "Text not set";
 
     private HashSet<int> reservedDialogIDs = new HashSet<int>();
     private int ReserveDialogID()
@@ -63,19 +61,18 @@ public class DialogEditor : EditorWindow
         }
     }
 
-    public static void ShowWindow(ConversationEngine instance)
+    public void Cleanup()
     {
-        source = instance;
-        window = EditorWindow.GetWindow<DialogEditor>("Dialog Editor");
-        window.minSize = new Vector2(600, 400);
-        window.Start();
-    }
-
-    public static void Cleanup()
-    {
-        source = null;
-        window = null;
-        Localization.LocalizedStringEditor.CancelEdit();
+        if (sourceCollection != null)
+        {
+            EditorUtility.SetDirty(sourceCollection);
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(sourceCollection));
+        }
+        if (activeStringEditor != null) 
+        {
+            activeStringEditor.EndEdit();
+            activeStringEditor = null;
+        }
     }
 
     private Dialog activeDialog;
@@ -95,41 +92,50 @@ public class DialogEditor : EditorWindow
     {
         activeSubDialog = null;
         activeOptionNode = null;
-        Localization.LocalizedStringEditor.CancelEdit();
+        activeStringEditor = null;
     }
     private float leftColumnWidth = 200;
     private float rightColumnoverlayWidth = 200;
     private Color nodeColor = new Color(0.75f,0.75f,0.75f,1f);
     Vector2 dialogsScroll = Vector2.zero;
 
+    private LocalizedStringEditor activeStringEditor;
+
     void OnGUI()
     {
-        if (window == null || source == null) {
-            return;
-        }
-        GUI.enabled = (activeOptionNode == null && activeSubDialog == null);
-        Rect Left = new Rect(0, 0, leftColumnWidth, window.position.height);
+        if (sourceCollection == null) { return; }
+        if (activeStringEditor != null) { GUI.enabled = false; }
+        else { GUI.enabled = (activeOptionNode == null && activeSubDialog == null); }
+        Rect Left = new Rect(0, 0, leftColumnWidth, position.height);
         Color prev = GUI.color;
         GUI.color = inspectorColor;
         GUI.BeginGroup(Left, EditorStyles.textField);
         GUI.color = prev;
         DisplayDialogTools(Left);
         GUI.EndGroup();
-        DisplayDialogEditor(new Rect(leftColumnWidth, 0, window.position.width-leftColumnWidth, window.position.height));
-
+        DisplayDialogEditor(new Rect(leftColumnWidth, 0, position.width-leftColumnWidth, position.height));
         if (activeOptionNode != null)
         {
-            GUI.enabled = true;
-            DisplayOptionNodeInspector(new Rect(window.position.width - rightColumnoverlayWidth, 0, rightColumnoverlayWidth, window.position.height), activeOptionNode);
+            GUI.enabled = true & activeStringEditor == null;
+            DisplayOptionNodeInspector(new Rect(position.width - rightColumnoverlayWidth, 0, rightColumnoverlayWidth, position.height), activeOptionNode);
         }
         else if (activeSubDialog != null)
         {
+            GUI.enabled = true & activeStringEditor == null;
+            DisplayDialogNodeInspector(new Rect(position.width - rightColumnoverlayWidth, 0, rightColumnoverlayWidth, position.height), activeSubDialog);
+        }
+        if (activeStringEditor != null)
+        {
             GUI.enabled = true;
-            DisplayDialogNodeInspector(new Rect(window.position.width - rightColumnoverlayWidth, 0, rightColumnoverlayWidth, window.position.height), activeSubDialog);
+            if (activeStringEditor.DrawGUI() == false)
+            {
+                activeStringEditor.EndEdit();
+                activeStringEditor = null;
+            }
         }
     }
 
-    void Initialize()
+    public void Initialize()
     {
         if (headerStyle == null) 
         {
@@ -147,10 +153,11 @@ public class DialogEditor : EditorWindow
 
     void Update()
     {
-        if (window == null || source == null)
+        if (sourceCollection == null)
         {
             Cleanup();
             Close();
+            return;
         }
     }
 
@@ -159,116 +166,87 @@ public class DialogEditor : EditorWindow
         Cleanup();
     }
 
-    public void Start()
-    {
-        if (source != null && source.SavedDialogs != null)
-        {
-            LoadDialogs(new StringReader(source.SavedDialogs.text));
-        }
-        Initialize();
-    }
-
     bool isValidName(string name)
     {
         return !string.IsNullOrEmpty(name) && !name.StartsWith(" ");
     }
 
-    private void LoadDialogs(StringReader reader)
+    public static void OpenEdit(DialogCollection collection)
     {
-        try
+        DialogEditor window = EditorWindow.GetWindow<DialogEditor>("Dialog Editor");
+        window.minSize = new Vector2(600, 400);
+        window.Initialize();
+        window.sourceCollection = collection;
+    }
+
+    private void DeleteDialog(Dialog d)
+    {
+        if (sourceCollection.dialogs.Remove(d))
         {
-            DataContractSerializer deserializer = new DataContractSerializer(typeof(List<Dialog>));
-            using (XmlReader stream = XmlReader.Create(reader))
-            {
-                List<Dialog> lst = deserializer.ReadObject(stream) as List<Dialog>;
-                if (lst != null)
-                {
-                    reservedDialogIDs.Clear();
-                    dialogCollection = lst;
-                    LoadFixReservedIDs(dialogCollection);
-                }
-                else { Debug.LogWarning("Error loading dialogs"); }
-            }
-        }
-        catch (SerializationException)
-        {
-            Debug.LogWarning("Error loading dialogs");
-        }
-        catch (XmlException)
-        {
-            Debug.LogWarning("Error reading saved dialogs, format problem");
+            DestroyImmediate(d, true);
+            DirtyAsset();
         }
     }
+
+    private void DirtyAsset()
+    {
+        EditorUtility.SetDirty(sourceCollection);
+    }
+
+    private void AddToAsset(ScriptableObject so)
+    {
+        so.hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
+        AssetDatabase.AddObjectToAsset(so, sourceCollection);
+        DirtyAsset();
+    }
+
+    private void DeleteCleanupDialog(Dialog toDelete)
+    {
+        DeleteRecurseDialog(toDelete, activeDialog, false);
+        ReleaseDialogID(toDelete.ID);
+    }
+
+    private void DeleteRecurseDialog(Dialog toDelete, Dialog currentItemToCheck, bool releaseIfNotLoop)
+    {
+        if (currentItemToCheck == null) { return; }
+        for (int i = currentItemToCheck.Options.Count; i-- > 0; )
+        {
+            if (currentItemToCheck.Options[i].NextDialog == null) { continue; }
+
+            if (currentItemToCheck.Options[i].NextDialog == toDelete | releaseIfNotLoop)
+            {
+                if (!currentItemToCheck.Options[i].IsRedirection)
+                {
+                    DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, true);
+                }
+                currentItemToCheck.Options[i].NextDialog = null; //TODO cleanup unreferenced assets
+            }
+            else
+            {
+                DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, false);
+            }
+        }
+    }
+
     void DisplayDialogTools(Rect r)
     {
         GUILayout.Space(5);
         GUILayout.BeginVertical(EditorStyles.textArea,GUILayout.Width(r.width-8));
         if (GUILayout.Button("New Dialog"))
         {
-            Dialog d = new Dialog(true);
+            Dialog d = ScriptableObject.CreateInstance<Dialog>();
+            AddToAsset(d);
             d.ID = ReserveDialogID();
-            dialogCollection.Add(d);
+            sourceCollection.dialogs.Add(d);
             activeDialog = d;
-        }
-        bool prevEnabled = GUI.enabled;
-        if (dialogCollection.Count == 0)
-        {
-            GUI.enabled = false;
-        }
-        if (GUILayout.Button("Save"))
-        {
-            try
-            {
-                DataContractSerializer serializer = new DataContractSerializer(typeof(List<Dialog>));
-                string path = EditorUtility.SaveFilePanel("Save Dialogs", "Assets/DialogSystem/Dialogs", "Dialogs", "xml");
-                XmlWriterSettings settings = new XmlWriterSettings() { Indent = true };
-                using (XmlWriter stream = XmlWriter.Create(path, settings))
-                {
-                    serializer.WriteObject(stream, dialogCollection);
-                }
-                if (path.StartsWith(Application.dataPath))
-                {
-                    string relativePath = "Assets" + path.Substring(Application.dataPath.Length);
-                    AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
-                    source.SavedDialogs = AssetDatabase.LoadAssetAtPath(relativePath, typeof(TextAsset)) as TextAsset;
-                }
-                else
-                {
-                    Debug.Log("File not saved in Game folder, will not be available during runtime!");
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning(e.Message);
-            }
-        }
-        GUI.enabled = prevEnabled;
-        if (GUILayout.Button("Load"))
-        {
-            try
-            {
-                string path = EditorUtility.OpenFilePanel("Load Dialogs", "Assets/DialogSystem/Dialogs", "xml");
-                if (string.IsNullOrEmpty(path) || !System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(path))) { return; }
-                using (StreamReader sr = new StreamReader(path))
-                {
-                    using (StringReader reader = new StringReader(sr.ReadToEnd()))
-                    {
-                        LoadDialogs(reader);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning(e.Message);
-            }
         }
         GUILayout.EndVertical();
         Rect itemRect = new Rect(0, 0, r.width - 38, 17);
         Rect deleteItemRect = new Rect(itemRect.width, 0, 18, 17);
-        Rect scrollContainerRect = new Rect(2, 74, r.width - 5, r.height - 76);
-        Rect contentScrollRect = new Rect(0, 0, r.width - 20, Mathf.Max(dialogCollection.Count * itemRect.height, scrollContainerRect.height));
+        Rect scrollContainerRect = new Rect(2, 30, r.width - 5, r.height - 32);
+        Rect contentScrollRect = new Rect(0, 0, r.width - 20, Mathf.Max(sourceCollection.dialogs.Count * itemRect.height, scrollContainerRect.height));
         dialogsScroll = GUI.BeginScrollView(scrollContainerRect, dialogsScroll, contentScrollRect, false, true);
-        for (int i = 0; i < dialogCollection.Count; i++)
+        for (int i = 0; i < sourceCollection.dialogs.Count; i++)
         {
             itemRect.y = i * (itemRect.height+2);
             deleteItemRect.y = itemRect.y;
@@ -280,24 +258,29 @@ public class DialogEditor : EditorWindow
             {
                 break;
             }
-            if (dialogCollection[i] == activeDialog)
+            if (sourceCollection.dialogs[i] == activeDialog)
             {
                 GUI.color = Color.gray;
             }
-            if (GUI.Button(itemRect, dialogCollection[i].Title != null ? dialogCollection[i].Title.Description : "No Title", "ButtonLeft"))
+            string dTitle = sourceCollection.dialogs[i].Title.Description;
+            if (dTitle == null || dTitle.Length == 0)
             {
-                if (activeDialog == dialogCollection[i]) { activeDialog = null; }
+                dTitle = txtNotSetMsg;
+            }
+            if (GUI.Button(itemRect, dTitle, "ButtonLeft"))
+            {
+                if (activeDialog == sourceCollection.dialogs[i]) { activeDialog = null; }
                 else
                 {
-                    activeDialog = dialogCollection[i];
+                    activeDialog = sourceCollection.dialogs[i];
                 }
             }
             GUI.color = Color.white;
             if (GUI.Button(deleteItemRect, "x", "ButtonRight"))
             {
-                DeleteCleanupDialog(dialogCollection[i]);
-                if (dialogCollection[i] == activeDialog) { CloseSubInspector(); activeDialog = null; }
-                dialogCollection.Remove(dialogCollection[i]);
+                DeleteCleanupDialog(sourceCollection.dialogs[i]);
+                if (sourceCollection.dialogs[i] == activeDialog) { CloseSubInspector(); activeDialog = null; }
+                DeleteDialog(sourceCollection.dialogs[i]);
             }
         }
         GUI.EndScrollView();
@@ -326,7 +309,7 @@ public class DialogEditor : EditorWindow
         mainViewScrollPos = GUI.BeginScrollView(new Rect(0, 0, r.width-inspectorInset, r.height), mainViewScrollPos, new Rect(0, 0, countedWidth, countedHeight));
         if (previousState != countedWidth + countedHeight)
         {
-            window.Repaint();
+            Repaint();
             previousState = countedWidth + countedHeight;
         }
         countedHeight = 0;
@@ -377,13 +360,16 @@ public class DialogEditor : EditorWindow
             {
                 if (move == -10)
                 {
-                    if (d.Options.Count > 1)
+                    if (d.Options.Count > 0)
                     {
-                        if (d.Options[i].NextDialog != null && !d.Options[i].IsRedirection)
+                        DialogOption dI = d.Options[i];
+                        if (dI.NextDialog != null && !dI.IsRedirection)
                         {
-                            DeleteCleanupDialog(d.Options[i].NextDialog);
+                            DeleteCleanupDialog(dI.NextDialog);
                         }
-                        d.Options.RemoveAt(i);
+                        d.Options.Remove(dI);
+                        DestroyImmediate(dI, true);
+                        DirtyAsset();
                     }
                 }
                 else if (i + move >= 0 & i + move < d.Options.Count)
@@ -394,13 +380,11 @@ public class DialogEditor : EditorWindow
                 }
             }
         }
-        if (lastOptionDepth > 0)
+        if (DrawOptionRegion(new Rect(r.x + nodeWidth + indentWidth, r.y + nodeHeight, nodeWidth + indentWidth, nodeHeight), lastOptionDepth))
         {
-            if (DrawOptionRegion(new Rect(r.x + nodeWidth + indentWidth, r.y + nodeHeight, nodeWidth + indentWidth, nodeHeight), lastOptionDepth))
-            {
-                DialogOption dO = new DialogOption("Not Set");
-                d.Options.Add(dO);
-            }
+            DialogOption dO = ScriptableObject.CreateInstance<DialogOption>();
+            AddToAsset(dO);
+            d.Options.Add(dO);
         }
         return branchDepth;
     }
@@ -417,7 +401,12 @@ public class DialogEditor : EditorWindow
         if (title.y + title.height > countedHeight) { countedHeight = title.y + title.height; }
         if (title.x + title.width > countedWidth) { countedWidth = title.x + title.width; }
         int ret = 0;
-        if (GUI.Button(title, option.Text != null ? option.Text.Description : "Not Set", gs))
+        string tTitle = option.Text.Description;
+        if (tTitle == null || tTitle.Length == 0)
+        {
+            tTitle = txtNotSetMsg;
+        }
+        if (GUI.Button(title, tTitle, gs))
         {
             InspectOptionNode(option);
         }
@@ -437,6 +426,7 @@ public class DialogEditor : EditorWindow
         if (option.NextDialog != null)
         {
             DrawInlineDialogConstraints(new Rect(title.x+indentWidth, title.y - (title.height+2), title.width, title.height+10), option);
+            DrawInlineDialogNotifications(new Rect(title.x + indentWidth, title.y + title.height, title.width, title.height + 10), option);
             if (GUI.Button(new Rect(title.x + title.width - 17, r.y+5, 17, 13), "x", gs))
             {
                 if (!option.IsRedirection)
@@ -478,12 +468,42 @@ public class DialogEditor : EditorWindow
         GUILayout.EndArea();
     }
 
+    void DrawInlineDialogNotifications(Rect r, DialogOption d)
+    {
+        GUILayout.BeginArea(r);
+        GUILayout.BeginHorizontal();
+        Color prev = GUI.color;
+        GUI.color = Color.white;
+        GUIStyle gs = new GUIStyle(GUI.skin.button);
+        gs.fontSize = 8;
+        gs.alignment = TextAnchor.MiddleCenter;
+        gs.contentOffset = new Vector2(-1, 0);
+        gs.clipping = TextClipping.Overflow;
+        gs.border = new RectOffset(1, 1, 1, 1);
+        if (d.NextDialog != null)
+        {
+            for (int i = d.Notifications.Count; i-- > 0; )
+            {
+                DialogOptionNotification don = d.Notifications[i];
+                GUI.color = don.GetColor();
+                string tooltip = string.Format("Target: {0}, Type: {1}, Value: {2}", don.Target, don.Type, don.Value);
+                GUILayout.Box(new GUIContent(don.ShortIdentifier, tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
+            }
+        }
+        GUI.color = prev;
+        GUILayout.EndHorizontal();
+        GUILayout.EndArea();
+    }
+
     bool DrawOptionRegion(Rect r, int depth)
     {
         bool ret = false;
         Color prev = GUI.color;
         GUI.color = nodeColor;
-        GUI.Box(new Rect(r.x - r.width+indentWidth-2 , r.y, 5, r.height*depth), "", EditorStyles.textArea);
+        if (depth > 0)
+        {
+            GUI.Box(new Rect(r.x - r.width + indentWidth - 2, r.y, 5, r.height * depth), "", EditorStyles.textArea);
+        }
         if (GUI.Button(new Rect(r.x-r.width+indentWidth+2, r.y, 20, 19), "+", EditorStyles.miniButton)) {
             ret = true;
         }
@@ -502,23 +522,18 @@ public class DialogEditor : EditorWindow
         GUI.color = prev;
         GUILayout.Space(5);
         GUILayout.Label("Text", headerStyle);
-        GUILayout.Label(dOption.Text != null ? dOption.Text.Description : "Not Set", lblStyle);
+        string tText = dOption.Text.Description;
+        if (tText == null || tText.Length == 0)
+        {
+            tText = txtNotSetMsg;
+        }
+        GUILayout.Label(tText, lblStyle);
         GUILayout.Space(5);
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        if (dOption.Text == null)
+        if (GUILayout.Button("Edit", buttonStyle))
         {
-            if (GUILayout.Button("Add", buttonStyle))
-            {
-                dOption.Text = new Localization.LocalizedString();
-            }
-        }
-        else
-        {
-            if (GUILayout.Button("Edit", buttonStyle))
-            {
-                Localization.LocalizedStringEditor.OpenEdit(dOption.Text);
-            }
+            activeStringEditor = new LocalizedStringEditor(dOption.Text, "Option text");
         }
         GUILayout.EndHorizontal();
         GUILayout.Space(5);
@@ -531,7 +546,8 @@ public class DialogEditor : EditorWindow
         if (GUILayout.Button("New Sub-Dialog", buttonStyle))
         {
             int id = ReserveDialogID();
-            Dialog d = new Dialog(true);
+            Dialog d = ScriptableObject.CreateInstance<Dialog>();
+            AddToAsset(d);
             d.ID = id;
             dOption.NextDialog = d;
             dOption.IsRedirection = false;
@@ -544,7 +560,12 @@ public class DialogEditor : EditorWindow
         for (int i = 0; i < ddialogs.Count; i++)
         {
             if (ddialogs[i].Options.Contains(dOption)) { continue; }
-            if (GUILayout.Button(ddialogs[i].Title != null ? ddialogs[i].Title.Description : "No Title", buttonStyle))
+            string dTitle = ddialogs[i].Title.Description;
+            if (dTitle == null || dTitle.Length == 0)
+            {
+                dTitle = txtNotSetMsg;
+            }
+            if (GUILayout.Button(dTitle, buttonStyle))
             {
                 dOption.NextDialog = ddialogs[i];
                 dOption.IsRedirection = true;
@@ -556,10 +577,14 @@ public class DialogEditor : EditorWindow
         GUILayout.Space(10);
         GUILayout.Label("Notifications", headerStyle);
         GUILayout.BeginHorizontal();
+        bool prevEnabled = GUI.enabled;
+        if (dOption.Notifications.Count >= 6) { GUI.enabled = false; }
         if (GUILayout.Button("Add", buttonStyle))
         {
             dOption.Notifications.Add(new DialogOptionNotification());
+            DirtyAsset();
         }
+        GUI.enabled = prevEnabled;
         if (GUILayout.Button("Remove all", buttonStyle))
         {
             dOption.Notifications.Clear();
@@ -627,44 +652,34 @@ public class DialogEditor : EditorWindow
         GUI.color = prev;
         GUILayout.Space(5);
         GUILayout.Label("Title", headerStyle);
-        GUILayout.Label(d.Title!=null?d.Title.Description:"Not Set", lblStyle);
+        string dTitle = d.Title.Description;
+        if (dTitle == null || dTitle.Length == 0)
+        {
+            dTitle = txtNotSetMsg;
+        }
+        GUILayout.Label(dTitle, lblStyle);
         GUILayout.Space(5);
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        if (d.Title == null)
+        if (GUILayout.Button("Edit", buttonStyle))
         {
-            if (GUILayout.Button("Add", buttonStyle))
-            {
-                d.Title = new Localization.LocalizedString();
-            }
-        }
-        else
-        {
-            if (GUILayout.Button("Edit", buttonStyle))
-            {
-                Localization.LocalizedStringEditor.OpenEdit(d.Title);
-            }
+            activeStringEditor = new LocalizedStringEditor(d.Title, "Dialog title");
         }
         GUILayout.EndHorizontal();
         GUILayout.Space(5);
         GUILayout.Label("Text", headerStyle);
-        GUILayout.Label(d.Text != null ? d.Text.Description : "Not Set", lblStyle);
+        string dText = d.Text.Description;
+        if (dText == null || dText.Length == 0)
+        {
+            dText = txtNotSetMsg;
+        }
+        GUILayout.Label(dText, lblStyle);
         GUILayout.Space(5);
         GUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        if (d.Text == null)
+        if (GUILayout.Button("Edit", buttonStyle))
         {
-            if (GUILayout.Button("Add", buttonStyle))
-            {
-                d.Text = new Localization.LocalizedString();
-            }
-        }
-        else
-        {
-            if (GUILayout.Button("Edit", buttonStyle))
-            {
-                Localization.LocalizedStringEditor.OpenEdit(d.Text);
-            }
+            activeStringEditor = new LocalizedStringEditor(d.Text, "Dialog text");
         }
         GUILayout.EndHorizontal();
         GUILayout.Space(5);
@@ -787,7 +802,12 @@ public class DialogEditor : EditorWindow
         Rect title = new Rect(r.x, r.y+5, r.width-20, r.height-5);
         if (title.y + title.height > countedHeight) { countedHeight = title.y + title.height; }
         if (title.x + title.width > countedWidth) { countedWidth = title.x + title.width; }
-        if (GUI.Button(title, d.Title != null ? d.Title.Description : "No Title"))
+        string dTitle = d.Title.Description;
+        if (dTitle == null || dTitle.Length == 0)
+        {
+            dTitle = txtNotSetMsg;
+        }
+        if (GUI.Button(title, dTitle))
         {
             InspectDialogNode(d);
         }
@@ -812,33 +832,4 @@ public class DialogEditor : EditorWindow
         return dl;
     }
 
-    private void DeleteCleanupDialog(Dialog toDelete)
-    {
-        DeleteRecurseDialog(toDelete, activeDialog, false);
-        ReleaseDialogID(toDelete.ID);
-    }
-
-    private void DeleteRecurseDialog(Dialog toDelete, Dialog currentItemToCheck, bool releaseIfNotLoop)
-    {
-        for (int i = currentItemToCheck.Options.Count; i-- > 0; )
-        {
-            if (currentItemToCheck.Options[i].NextDialog == null) { continue; }
-
-            if (currentItemToCheck.Options[i].NextDialog == toDelete | releaseIfNotLoop)
-            {
-
-                if (!currentItemToCheck.Options[i].IsRedirection)
-                {
-                    DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, true);
-                }
-
-                currentItemToCheck.Options[i].NextDialog = null;
-            }
-            else
-            {
-                DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, false);
-            }
-
-        }
-    }
 }

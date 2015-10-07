@@ -1,14 +1,18 @@
 ﻿using UnityEngine;
 using UnityEditor;
 using System.Collections;
+using DialogSystem;
 
 [CustomEditor(typeof(ConversationEngine))]
 public class ConversationEngineInspector : Editor
 {
+
+    private LocalizedStringEditor activeStringEditor;
+
     public override void OnInspectorGUI()
     {
         ConversationEngine engine = target as ConversationEngine;
-        engine.SavedDialogs = EditorGUILayout.ObjectField(new GUIContent("Saved Dialogs"), engine.SavedDialogs, typeof(TextAsset), false) as TextAsset;
+        engine.SavedDialogs = EditorGUILayout.ObjectField(new GUIContent("Dialogs"), engine.SavedDialogs, typeof(DialogCollection), false) as DialogCollection;
         engine.fallback = (Localization.LocalizationFallback)EditorGUILayout.EnumPopup("Fallback:", engine.fallback);
         if (engine.fallback == Localization.LocalizationFallback.Language)
         {
@@ -19,20 +23,25 @@ public class ConversationEngineInspector : Editor
         engine.UseEndConversationfallback = EditorGUILayout.Toggle(engine.UseEndConversationfallback, GUILayout.Width(15));
         if (engine.UseEndConversationfallback)
         {
-            if (engine.EndConversationFallback == null)
-            {
-                engine.EndConversationFallback = new Localization.LocalizedString("End Conversation");
-            }
             if (GUILayout.Button("Edit text", EditorStyles.miniButton))
             {
-                Localization.LocalizedStringEditor.OpenEdit(engine.EndConversationFallback);
+                activeStringEditor = new LocalizedStringEditor(engine.EndConversationFallback, "Fallback option text", false);
             }
         }
         GUILayout.EndHorizontal();
+        if (activeStringEditor != null)
+        {
+            if (activeStringEditor.DrawGUI() == false)
+            {
+                activeStringEditor.EndEdit();
+                activeStringEditor = null;
+            }
+        }
         GUILayout.Space(10);
+        GUI.enabled = engine.SavedDialogs != null;
         if (GUILayout.Button("Edit Dialogs"))
         {
-            DialogEditor.ShowWindow(engine);
+            DialogEditor.OpenEdit(engine.SavedDialogs);
         }
         GUILayout.Space(10);
     }

@@ -11,8 +11,8 @@ public class ConversationEngine : MonoBehaviour
 {
 
     [SerializeField, HideInInspector]
-    private TextAsset savedDialogs;
-    public TextAsset SavedDialogs
+    private DialogCollection savedDialogs;
+    public DialogCollection SavedDialogs
     {
         get { return savedDialogs; }
         set { savedDialogs = value; }
@@ -63,33 +63,11 @@ public class ConversationEngine : MonoBehaviour
     /// Loads all saved dialogs from the specified save file
     /// </summary>
     /// <returns>returns true if loading was successful</returns>
-    public bool LoadDialogs(TextAsset asset)
+    public bool LoadDialogs(DialogCollection collection)
     {
-        try
-        {
-            DataContractSerializer deserializer = new DataContractSerializer(typeof(List<Dialog>));
-            StringReader reader = new StringReader(asset.text);
-            using (XmlReader stream = XmlReader.Create(reader))
-            {
-                List<Dialog> lst = deserializer.ReadObject(stream) as List<Dialog>;
-                if (lst != null)
-                {
-                    //PrepareConversations(lst);
-                    conversations = lst;
-                    return true;
-                }
-                else 
-                {
-                    Debug.LogWarning("Error loading dialogs");
-                    return false;
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning(e.Message);
-            return false;
-        }
+        if (collection == null) { return false; }
+        savedDialogs = collection;
+        return true;
     }
 
     /// <summary>
@@ -116,8 +94,8 @@ public class ConversationEngine : MonoBehaviour
         }
         if (availableTopics.Count == 1)
         {
-            string title = conversations[0].GetTitle(language, fallback, fallbackLanguage);
-            string text = conversations[0].GetText(language, fallback, fallbackLanguage);
+            string title = conversations[0].Title.GetString(language, fallback, fallbackLanguage);
+            string text = conversations[0].Text.GetString(language, fallback, fallbackLanguage);
             return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldInfo, language));
         }
         else if (availableTopics.Count > 1)
@@ -125,7 +103,7 @@ public class ConversationEngine : MonoBehaviour
             Conversation c = new Conversation(-1, "", "", "", Conversation.ConversationType.TopicList, new List<Conversation.Answer>());
             foreach (Dialog d in availableTopics)
             {
-                string title = d.GetTitle(language, fallback, fallbackLanguage);
+                string title = d.Title.GetString(language, fallback, fallbackLanguage);
                 Conversation.Answer ca = new Conversation.Answer(d.ID, title, d.Tag);
                 c.Answers.Add(ca);
             }
@@ -158,8 +136,8 @@ public class ConversationEngine : MonoBehaviour
             }
             else
             {
-                string title = activeDialog.GetTitle(language, fallback, fallbackLanguage);
-                string text = activeDialog.GetText(language, fallback, fallbackLanguage);
+                string title = activeDialog.Title.GetString(language, fallback, fallbackLanguage);
+                string text = activeDialog.Text.GetString(language, fallback, fallbackLanguage);
                 return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldInfo, language));
             }
         }
@@ -179,8 +157,8 @@ public class ConversationEngine : MonoBehaviour
             {
                 if (CheckAvailability(chosenOption.NextDialog, npc, player, worldInfo))
                 {
-                    string title = chosenOption.NextDialog.GetTitle(language, fallback, fallbackLanguage);
-                    string text = chosenOption.NextDialog.GetText(language, fallback, fallbackLanguage);
+                    string title = chosenOption.NextDialog.Title.GetString(language, fallback, fallbackLanguage);
+                    string text = chosenOption.NextDialog.Text.GetString(language, fallback, fallbackLanguage);
                     return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldInfo, language));
                 }
             }
@@ -247,12 +225,12 @@ public class ConversationEngine : MonoBehaviour
         {
             if (d.Options[i].NextDialog == null)
             {
-                string text = d.Options[i].GetText(language, fallback, fallbackLanguage);
+                string text = d.Options[i].Text.GetString(language, fallback, fallbackLanguage);
                 answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
             } 
             else if (CheckAvailability(d.Options[i].NextDialog, npc, player, worldInfo))
             {
-                string text = d.Options[i].GetText(language, fallback, fallbackLanguage);
+                string text = d.Options[i].Text.GetString(language, fallback, fallbackLanguage);
                 answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
             }
         }
