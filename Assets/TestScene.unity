@@ -202,16 +202,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1adc75cc9e610fc41be9d700d1f50f46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  savedDialogs: {fileID: 4900000, guid: 86fc8e0bdbdd34c45aa60e846f1f23e7, type: 3}
+  savedDialogs: {fileID: 11400000, guid: 1440c72fdee58204cbe02fcc255aec64, type: 2}
   fallback: 1
   fallbackLanguage: 0
   UseEndConversationfallback: 1
   EndConversationFallback:
-    Strings:
+    Description: End Conversation
+    strings:
     - language: 0
-      Text: E Endthis
-    - language: 1
-      Text: D Beende dies
+      Text: 
 --- !u!108 &2061911257
 Light:
   m_ObjectHideFlags: 0
@@ -270,14 +269,17 @@ MonoBehaviour:
   conversationEngine: {fileID: 2061911256}
   language: 0
   npc:
+    name: Npc
     intValue: 0
     stringValue: 
     floatValue: 0
   player:
+    name: Player
     intValue: 0
     stringValue: 
     floatValue: 0
   world:
+    name: World
     intValue: 0
     stringValue: 
     floatValue: 0

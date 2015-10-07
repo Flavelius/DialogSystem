@@ -35,32 +35,6 @@ public class DialogEditor : EditorWindow
         reservedDialogIDs.Remove(id);
     }
 
-    private void LoadFixReservedIDs(List<Dialog> allDialogs)
-    {
-        bool needsSaving = false;
-        for (int i = 0; i < allDialogs.Count; i++)
-        {
-            List<Dialog> subDialogs = new List<Dialog>();
-            subDialogs = GetAllDialogsInChain(subDialogs, allDialogs[i]);
-            for (int s = 0; s < subDialogs.Count; s++)
-            {
-                if (!reservedDialogIDs.Contains(subDialogs[s].ID))
-                {
-                    reservedDialogIDs.Add(subDialogs[s].ID);
-                }
-                else
-                {
-                    subDialogs[s].ID = ReserveDialogID();
-                    needsSaving = true;
-                }
-            }
-        }
-        if (needsSaving)
-        {
-            Debug.LogWarning("duplicate IDs fixed, Save Dialog file!");
-        }
-    }
-
     public void Cleanup()
     {
         if (sourceCollection != null)
@@ -139,7 +113,7 @@ public class DialogEditor : EditorWindow
     {
         if (headerStyle == null) 
         {
-            headerStyle = new GUIStyle(GUI.skin.GetStyle("flow shader node 0")); 
+            headerStyle = new GUIStyle(GUI.skin.GetStyle("TL SelectionBarPreview"));
             headerStyle.stretchWidth = true; 
             headerStyle.fontStyle = FontStyle.Bold; 
             headerStyle.fontSize = 14;
@@ -174,9 +148,33 @@ public class DialogEditor : EditorWindow
     public static void OpenEdit(DialogCollection collection)
     {
         DialogEditor window = EditorWindow.GetWindow<DialogEditor>("Dialog Editor");
+        window.Close();
+        window = EditorWindow.GetWindow<DialogEditor>("Dialog Editor");
         window.minSize = new Vector2(600, 400);
-        window.Initialize();
-        window.sourceCollection = collection;
+        window.Load(collection);
+    }
+
+    public void Load(DialogCollection collection)
+    {
+        Initialize();
+        sourceCollection = collection;
+        for (int i = 0; i < sourceCollection.dialogs.Count; i++)
+        {
+            List<Dialog> subDialogs = new List<Dialog>();
+            subDialogs = GetAllDialogsInChain(subDialogs, sourceCollection.dialogs[i]);
+            for (int s = 0; s < subDialogs.Count; s++)
+            {
+                if (!reservedDialogIDs.Contains(subDialogs[s].ID))
+                {
+                    reservedDialogIDs.Add(subDialogs[s].ID);
+                }
+                else //fix problems
+                {
+                    subDialogs[s].ID = ReserveDialogID();
+                    DirtyAsset();
+                }
+            }
+        }
     }
 
     private void DeleteDialog(Dialog d)
@@ -386,6 +384,7 @@ public class DialogEditor : EditorWindow
             AddToAsset(dO);
             d.Options.Add(dO);
         }
+        branchDepth++;
         return branchDepth;
     }
 
@@ -460,7 +459,7 @@ public class DialogEditor : EditorWindow
                 DialogRequirement req = d.NextDialog.Requirements[i];
                 GUI.color = req.GetColor();
                 string tooltip = string.Format("Target: {0}, Type: {1}, IntValue({2}), StringValue('{3}'), FloatValue({4})", req.Target, req.Type, req.IntValue, req.StringValue, req.FloatValue);
-                GUILayout.Box(new GUIContent(req.ShortIdentifier, tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
+                GUILayout.Box(new GUIContent(req.GetShortIdentifier(), tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
             }
         }
         GUI.color = prev;
@@ -487,7 +486,7 @@ public class DialogEditor : EditorWindow
                 DialogOptionNotification don = d.Notifications[i];
                 GUI.color = don.GetColor();
                 string tooltip = string.Format("Target: {0}, Type: {1}, Value: {2}", don.Target, don.Type, don.Value);
-                GUILayout.Box(new GUIContent(don.ShortIdentifier, tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
+                GUILayout.Box(new GUIContent(don.GetShortIdentifier(), tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
             }
         }
         GUI.color = prev;

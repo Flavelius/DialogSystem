@@ -37,17 +37,22 @@ public class DialogTester : MonoBehaviour
     }
 
     [SerializeField]
-    private TestDialogEntity npc = new TestDialogEntity();
+    private TestDialogEntity npc = new TestDialogEntity("Npc");
     [SerializeField]
-    private TestDialogEntity player = new TestDialogEntity();
+    private TestDialogEntity player = new TestDialogEntity("Player");
     [SerializeField]
-    private TestDialogEntity world = new TestDialogEntity();
-
+    private TestDialogEntity world = new TestDialogEntity("World");
 
     [System.Serializable]
     public class TestDialogEntity : IConversationRelevance
     {
 
+        public TestDialogEntity(string name)
+        {
+            this.name = name;
+        }
+
+        [SerializeField]
         private string name = "Npc";
         public string Name
         {

@@ -13,12 +13,7 @@ public class DialogRequirement: IDialogRequirement
     }
 
     [SerializeField, HideInInspector]
-    private DialogRequirementTarget target = DialogRequirementTarget.Npc;
-    public DialogRequirementTarget Target
-    {
-        get { return target; }
-        set { target = value; }
-    }
+    public DialogRequirementTarget Target = DialogRequirementTarget.Npc;
 
     [SerializeField, HideInInspector]
     private int intValue = 0;
@@ -35,7 +30,6 @@ public class DialogRequirement: IDialogRequirement
         get { return floatValue; }
         set { floatValue = value; }
     }
-    
 
     [SerializeField, HideInInspector]
     private string stringValue = "";
@@ -45,17 +39,14 @@ public class DialogRequirement: IDialogRequirement
         set { stringValue = value; }
     }
 
-    public string ShortIdentifier
+    public string GetShortIdentifier()
     {
-        get
-        {
-            return string.Format("{0}{1}", target.ToString()[0], type.ToString()[0]);
-        }
+        return string.Format("{0}{1}", Target.ToString()[0], Type.ToString()[0]);
     }
 
     public Color GetColor()
     {
-        return new Color((int)target * 0.1f, (int)type * 0.1f, (int)type * 0.1f, 1f);
+        return new Color((int)Target * 0.1f, (int)Type * 0.1f, (int)Type * 0.1f, 1f);
     }
 
 }

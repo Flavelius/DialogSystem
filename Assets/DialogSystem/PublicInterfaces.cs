@@ -25,7 +25,7 @@ public enum DialogRequirementTarget
 {
     Npc = 4,
     Player = 7,
-    World = 10,
+    WorldContext = 10,
 }
 
 public enum DialogNotificationType

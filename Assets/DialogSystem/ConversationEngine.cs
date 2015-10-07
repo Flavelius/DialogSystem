@@ -44,12 +44,7 @@ public class ConversationEngine : MonoBehaviour
     /// </summary>
     private List<Dialog> conversations = new List<Dialog>();
 
-    void Awake()
-    {
-        Initialize();
-    }
-
-    private void Initialize()
+    void Start()
     {
         if (savedDialogs == null)
         {
@@ -66,7 +61,7 @@ public class ConversationEngine : MonoBehaviour
     public bool LoadDialogs(DialogCollection collection)
     {
         if (collection == null) { return false; }
-        savedDialogs = collection;
+        conversations = collection.dialogs;
         return true;
     }
 
@@ -75,20 +70,16 @@ public class ConversationEngine : MonoBehaviour
     /// </summary>
     /// <param name="npc">Required, reference to the topics owning npc</param>
     /// <param name="player">Required, reference to the conversing player</param>
-    /// <param name="worldInfo">Not required, but could be, depending on the settings of certain dialogs</param>
+    /// <param name="worldContext">Not required, but could be, depending on the settings of certain dialogs</param>
     /// <param name="language">The language the conversing player should receive an answer in</param>
     /// <returns></returns>
-    public Conversation GetAvailableTopics(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, Language language)
+    public Conversation GetAvailableTopics(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldContext, Language language)
     {
-        //List<Conversation> availableTopics = new List<Conversation>();
         List<Dialog> availableTopics = new List<Dialog>();
         for (int i = 0; i < conversations.Count; i++)
         {
-            if (CheckAvailability(conversations[i], npc, player, worldInfo))
+            if (CheckAvailability(conversations[i], npc, player, worldContext))
             {
-                //string title = conversations[i].GetTitle(language, fallback, fallbackLanguage);
-                //string text = conversations[i].GetText(language, fallback, fallbackLanguage);
-                //availableTopics.Add(new Conversation(conversations[i].ID, title, text, conversations[i].Tag, GetAvailableAnswers(conversations[i], npc, player, worldInfo, language)));
                 availableTopics.Add(conversations[i]);
             }
         }
@@ -96,7 +87,7 @@ public class ConversationEngine : MonoBehaviour
         {
             string title = conversations[0].Title.GetString(language, fallback, fallbackLanguage);
             string text = conversations[0].Text.GetString(language, fallback, fallbackLanguage);
-            return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldInfo, language));
+            return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
         }
         else if (availableTopics.Count > 1)
         {
@@ -110,7 +101,6 @@ public class ConversationEngine : MonoBehaviour
             return c;
         }
         return null;
-        //return availableTopics;
     }
 
     /// <summary>
@@ -118,18 +108,18 @@ public class ConversationEngine : MonoBehaviour
     /// </summary>
     /// <param name="npc">Required, reference to the topics owning npc</param>
     /// <param name="player">Required, reference to the conversing player</param>
-    /// <param name="worldInfo">Not required, but could be, depending on the settings of certain dialogs</param>
+    /// <param name="worldContext">Not required, but could be, depending on the settings of certain dialogs</param>
     /// <param name="dialogID">The id, of the dialog that is answered, or -1 if answer came from topicList</param>
     /// <param name="answerIndex">The index of the answer of the answered dialog, or dialogID if answer came from topicList</param>
     /// <param name="language">The language the conversing player should receive an answer in</param>
     /// <returns></returns>
-    public Conversation Answer(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo, int dialogID, int answerIndex, Language language)
+    public Conversation Answer(IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldContext, int dialogID, int answerIndex, Language language)
     {
         Dialog activeDialog = null;
         if (dialogID == -1)
         {
             activeDialog = GetDialog(npc, answerIndex);
-            if (activeDialog == null || !CheckAvailability(activeDialog, npc, player, worldInfo))
+            if (activeDialog == null || !CheckAvailability(activeDialog, npc, player, worldContext))
             {
                 Debug.LogWarning("Selection from topicList invalid");
                 return null;
@@ -138,7 +128,7 @@ public class ConversationEngine : MonoBehaviour
             {
                 string title = activeDialog.Title.GetString(language, fallback, fallbackLanguage);
                 string text = activeDialog.Text.GetString(language, fallback, fallbackLanguage);
-                return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldInfo, language));
+                return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldContext, language));
             }
         }
         else
@@ -151,15 +141,15 @@ public class ConversationEngine : MonoBehaviour
             DialogOption chosenOption = activeDialog.Options[answerIndex];
             for (int i = 0; i < chosenOption.Notifications.Count; i++)
             {
-                chosenOption.Notifications[i].Notify(activeDialog, npc, player, worldInfo);
+                chosenOption.Notifications[i].Notify(activeDialog, npc, player, worldContext);
             }
             if (chosenOption.NextDialog != null)
             {
-                if (CheckAvailability(chosenOption.NextDialog, npc, player, worldInfo))
+                if (CheckAvailability(chosenOption.NextDialog, npc, player, worldContext))
                 {
                     string title = chosenOption.NextDialog.Title.GetString(language, fallback, fallbackLanguage);
                     string text = chosenOption.NextDialog.Text.GetString(language, fallback, fallbackLanguage);
-                    return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldInfo, language));
+                    return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldContext, language));
                 }
             }
         }

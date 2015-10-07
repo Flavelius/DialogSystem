@@ -49,9 +49,13 @@ namespace DialogSystem
             set { targetName = value; }
         }
 
-        public void Notify(Dialog parent, IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldInfo)
+        public void Notify(Dialog parent, IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldContext)
         {
             Debug.Log("TODO notifier string/ID to other function?");
+            if (type == DialogNotificationType.DialogCompleted)
+            {
+                Value = parent.ID.ToString();
+            }
             switch (target)
             {
                 case DialogNotificationTarget.Player:
@@ -61,7 +65,7 @@ namespace DialogSystem
                     npc.OnDialogNotification(player, npc, this);
                     break;
                 case DialogNotificationTarget.World:
-                    worldInfo.OnDialogNotification(player, npc, this);
+                    worldContext.OnDialogNotification(player, npc, this);
                     break;
                 case DialogNotificationTarget.Other:
                 default:
@@ -74,17 +78,14 @@ namespace DialogSystem
             }
         }
 
-        public string ShortIdentifier
+        public string GetShortIdentifier()
         {
-            get
-            {
-                return string.Format("{0}{1}", target.ToString()[0], type.ToString()[0]);
-            }
+            return string.Format("{0}{1}", target.ToString()[0], type.ToString()[0]);
         }
 
         public Color GetColor()
         {
-            return new Color((int)target * 0.4f, (int)type * 0.4f, (int)type * 0.4f, 1f);
+            return Color.Lerp(Color.gray, new Color((float)target*0.6f, (float)type*0.6f, (float)Value.GetHashCode()*0.6f, 1f), 0.5f);
         }
     }
 }
