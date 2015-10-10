@@ -59,11 +59,6 @@ namespace DialogSystem
             public int intValue;
             public string stringValue;
             public float floatValue;
-
-            public void OnDialogNotification(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogNotification notification)
-            {
-                Debug.Log(Name + " received notification: " + notification.Type + " with value: " + notification.Value);
-            }
         }
 
         [System.Serializable]
@@ -82,9 +77,9 @@ namespace DialogSystem
             public string stringValue;
             public float floatValue;
 
-            public void OnDialogNotification(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogNotification notification)
+            public void OnDialogCompleted(int id)
             {
-                Debug.Log(Name + " received notification: " + notification.Type + " with value: " + notification.Value);
+                Debug.Log("Dialog completed: "+id);
             }
         }
 
@@ -102,11 +97,6 @@ namespace DialogSystem
             public int intValue;
             public string stringValue;
             public float floatValue;
-
-            public void OnDialogNotification(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogNotification notification)
-            {
-                Debug.Log(Name + " received notification: " + notification.Type + " with value: " + notification.Value);
-            }
         }
 
     }

@@ -136,9 +136,9 @@ namespace DialogSystem
             if (answerIndex >= 0 && answerIndex < activeDialog.Options.Count)
             {
                 DialogOption chosenOption = activeDialog.Options[answerIndex];
-                for (int i = 0; i < chosenOption.Notifications.Count; i++)
+                for (int i = 0; i < chosenOption.Triggers.Count; i++)
                 {
-                    chosenOption.Notifications[i].Notify(activeDialog, npc, player, worldContext);
+                    chosenOption.Triggers[i].Execute(activeDialog, player, npc, worldContext);
                 }
                 if (chosenOption.NextDialog != null)
                 {

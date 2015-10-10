@@ -36,7 +36,7 @@ MonoBehaviour:
   - {fileID: 11416622}
   requirementMode: 0
   requirements:
-  - {fileID: 11496206}
+  - {fileID: 11488570}
 --- !u!114 &11416622
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -54,7 +54,18 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 0}
   isRedirection: 0
-  notifications: []
+  triggers: []
+--- !u!114 &11418206
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5c19df1d43d16b4791e81a7fb20a12d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &11422178
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -78,6 +89,29 @@ MonoBehaviour:
   - {fileID: 11488728}
   requirementMode: 0
   requirements: []
+--- !u!114 &11460944
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5c19df1d43d16b4791e81a7fb20a12d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &11488570
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 876776014be25c341b5fd8f302e546a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  intValue: 0
 --- !u!114 &11488728
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -95,20 +129,4 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 11410692}
   isRedirection: 0
-  notifications:
-  - type: 0
-    paramValue: 0
-    target: 0
-    targetName: 
---- !u!114 &11496206
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 876776014be25c341b5fd8f302e546a7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  intValue: 0
+  triggers: []

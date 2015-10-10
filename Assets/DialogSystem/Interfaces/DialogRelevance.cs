@@ -1,16 +1,17 @@
 ﻿namespace DialogSystem
 {
-    public interface IDialogRelevantPlayer : IDialogNotificationReceiver
+    public interface IDialogRelevantPlayer
     {
         int IntValue { get; }
+        void OnDialogCompleted(int id);
     }
 
-    public interface IDialogRelevantNPC : IDialogNotificationReceiver
+    public interface IDialogRelevantNPC
     {
 
     }
 
-    public interface IDialogRelevantWorldInfo : IDialogNotificationReceiver
+    public interface IDialogRelevantWorldInfo
     {
 
     }

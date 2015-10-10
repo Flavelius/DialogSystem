@@ -6,18 +6,18 @@ using DialogSystem.Requirements.Internal;
 
 namespace DialogSystem.Requirements
 {
-    public abstract class Requirement_NPC : BaseRequirement
+    public abstract class Requirement_World : BaseRequirement
     {
-        public override DialogRequirementTarget Target
+        public override DialogTargetSpecifier Target
         {
-            get { return DialogRequirementTarget.Npc; }
+            get { return DialogTargetSpecifier.World; }
         }
 
         public override sealed bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo)
         {
-            return Evaluate(npc);
+            return Evaluate(worldInfo);
         }
 
-        protected abstract bool Evaluate(IDialogRelevantNPC npc);
+        protected abstract bool Evaluate(IDialogRelevantWorldInfo worldInfo);
     }
 }

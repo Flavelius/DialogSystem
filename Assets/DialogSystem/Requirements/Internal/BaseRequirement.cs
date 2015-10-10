@@ -11,14 +11,31 @@ namespace DialogSystem.Requirements.Internal
     /// </summary>
     public abstract class BaseRequirement : ScriptableObject
     {
-        public abstract DialogRequirementTarget Target { get; }
+        public abstract DialogTargetSpecifier Target { get; }
 
         public abstract bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo);
+
+        [NonSerialized]
+        private string cachedName = "";
+        public virtual string CachedName { get { return cachedName; } }
 
         public virtual Color GetColor() { return Color.white; }
 
         public virtual string GetToolTip() { return this.GetType().Name; }
 
         public virtual string GetShortIdentifier() { return this.GetType().Name[0].ToString(); }
+
+        void OnEnable()
+        {
+            ReadableNameAttribute[] rns = GetType().GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
+            if (rns.Length > 0)
+            {
+                cachedName = rns[0].Name;
+            }
+            else
+            {
+                cachedName = GetType().Name;
+            }
+        }
     }
 }

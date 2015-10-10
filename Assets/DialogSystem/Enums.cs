@@ -1,7 +1,7 @@
 ﻿
 namespace DialogSystem
 {
-    public enum DialogRequirementTarget
+    public enum DialogTargetSpecifier
     {
         Npc = 4,
         Player = 7,

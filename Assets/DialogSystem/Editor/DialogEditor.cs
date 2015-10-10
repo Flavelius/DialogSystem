@@ -6,12 +6,16 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using DialogSystem.Triggers;
 
 public class DialogEditor : EditorWindow
 {
     public DialogCollection sourceCollection;
-    List<Type> usableTypes = new List<Type>();
-    List<string> usableTypeNames = new List<string>();
+    List<Type> usableRequirementTypes = new List<Type>();
+    List<string> usableRequirementNames = new List<string>();
+
+    List<Type> usableTriggerTypes = new List<Type>();
+    List<string> usableTriggerNames = new List<string>();
 
     private GUIStyle headerStyle;
     private Color inspectorColor;
@@ -36,13 +40,54 @@ public class DialogEditor : EditorWindow
         reservedDialogIDs.Remove(id);
     }
 
-    private List<Type> CollectUsableRequirementTypes()
+    private void CollectUsableRequirementTypes()
     {
+        usableRequirementTypes.Clear();
+        usableRequirementNames.Clear();
         List<Type> types = new List<Type>
             (
             Assembly.GetAssembly(typeof(BaseRequirement)).GetTypes().Where(i => i.IsSubclassOf(typeof(BaseRequirement)) && i.IsPublic && i.IsClass && !i.IsAbstract)
             );
-        return types;
+        usableRequirementTypes.Add(null);
+        usableRequirementNames.Add("Add");
+        foreach (Type t in types)
+        {
+            usableRequirementTypes.Add(t);
+            ReadableNameAttribute[] rns = t.GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
+            if (rns.Length > 0)
+            {
+                usableRequirementNames.Add(rns[0].Name);
+            }
+            else
+            {
+                usableRequirementNames.Add(t.Name);
+            }
+        }
+    }
+
+    private void CollectUsableTriggerTypes()
+    {
+        usableTriggerTypes.Clear();
+        usableTriggerNames.Clear();
+        List<Type> types = new List<Type>
+            (
+            Assembly.GetAssembly(typeof(DialogOptionTrigger)).GetTypes().Where(i => i.IsSubclassOf(typeof(DialogOptionTrigger)) && i.IsPublic && i.IsClass && !i.IsAbstract)
+            );
+        usableTriggerTypes.Add(null);
+        usableTriggerNames.Add("Add");
+        foreach (Type t in types)
+        {
+            usableTriggerTypes.Add(t);
+            ReadableNameAttribute[] rns = t.GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
+            if (rns.Length > 0)
+            {
+                usableTriggerNames.Add(rns[0].Name);
+            }
+            else
+            {
+                usableTriggerNames.Add(t.Name);
+            }
+        }
     }
 
     public void Cleanup()
@@ -133,13 +178,8 @@ public class DialogEditor : EditorWindow
         lblStyle.stretchWidth = true;
         inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
         buttonStyle = GUI.skin.GetStyle("PreButton");
-        usableTypes.Add(null);
-        usableTypeNames.Add("Add");
-        foreach (Type t in CollectUsableRequirementTypes())
-        {
-            usableTypes.Add(t);
-            usableTypeNames.Add(t.Name);
-        }
+        CollectUsableRequirementTypes();
+        CollectUsableTriggerTypes();
     }
 
     void Update()
@@ -493,12 +533,11 @@ public class DialogEditor : EditorWindow
         gs.border = new RectOffset(1, 1, 1, 1);
         if (d.NextDialog != null)
         {
-            for (int i = d.Notifications.Count; i-- > 0; )
+            for (int i = d.Triggers.Count; i-- > 0; )
             {
-                DialogOptionNotification don = d.Notifications[i];
-                GUI.color = don.GetColor();
-                string tooltip = string.Format("Target: {0}, Type: {1}, Value: {2}", don.Target, don.Type, don.Value);
-                GUILayout.Box(new GUIContent(don.GetShortIdentifier(), tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
+                DialogOptionTrigger dot = d.Triggers[i];
+                GUI.color = dot.GetColor();
+                GUILayout.Box(new GUIContent(dot.GetShortIdentifier(), dot.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
             }
         }
         GUI.color = prev;
@@ -586,27 +625,36 @@ public class DialogEditor : EditorWindow
         }
         GUILayout.EndScrollView();
         GUILayout.Space(10);
-        GUILayout.Label("Notifications", headerStyle);
+        GUILayout.Label("Triggers", headerStyle);
         GUILayout.BeginHorizontal();
         bool prevEnabled = GUI.enabled;
-        if (dOption.Notifications.Count >= 6) { GUI.enabled = false; }
-        if (GUILayout.Button("Add", buttonStyle))
+        if (dOption.Triggers.Count >= 6) { GUI.enabled = false; }
+        int index = EditorGUILayout.Popup(0, usableTriggerNames.ToArray());
+        if (index > 0)
         {
-            dOption.Notifications.Add(new DialogOptionNotification());
-            DirtyAsset();
+            DialogOptionTrigger tr = ScriptableObject.CreateInstance(usableTriggerTypes[index]) as DialogOptionTrigger;
+            AddToAsset(tr);
+            dOption.Triggers.Add(tr);
         }
         GUI.enabled = prevEnabled;
         if (GUILayout.Button("Remove all", buttonStyle))
         {
-            dOption.Notifications.Clear();
+            for (int i = dOption.Triggers.Count; i-- > 0; )
+            {
+                DestroyImmediate(dOption.Triggers[i]);
+                dOption.Triggers.RemoveAt(i);
+            }
         }
         GUILayout.EndHorizontal();
         scrollbar2 = GUILayout.BeginScrollView(scrollbar2);
-        for (int i = dOption.Notifications.Count; i-- > 0; )
+        for (int i = dOption.Triggers.Count; i-- > 0; )
         {
-            if (!InlineDisplayNotificationEditor(dOption.Notifications[i]))
+            if (dOption.Triggers[i] == null) { dOption.Triggers.RemoveAt(i); continue; }
+            if (!InlineDisplayTriggerEditor(dOption.Triggers[i]))
             {
-                dOption.Notifications.RemoveAt(i);
+                DestroyImmediate(dOption.Triggers[i], true);
+                dOption.Triggers.RemoveAt(i);
+                continue;
             }
         }
         GUILayout.EndScrollView();
@@ -617,42 +665,50 @@ public class DialogEditor : EditorWindow
         GUILayout.EndArea();
     }
 
-    bool InlineDisplayNotificationEditor(DialogOptionNotification notification)
+    bool InlineDisplayTriggerEditor(DialogOptionTrigger tr)
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
-        if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(17)))
+        GUILayout.Label(tr.CachedName, EditorStyles.helpBox);
+        if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
+        SerializedObject so = new SerializedObject(tr);
+        SerializedProperty sp = so.GetIterator();
+        sp.NextVisible(true);
+        if (sp != null)
         {
-            ret = false;
+            while (sp.NextVisible(false))
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
+                EditorGUILayout.PropertyField(sp, GUIContent.none);
+                GUILayout.EndHorizontal();
+            }
         }
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Type: ", GUILayout.Width(70));
-        notification.Type = (DialogNotificationType)EditorGUILayout.EnumPopup(notification.Type);
-        GUILayout.EndHorizontal();
-
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Target: ", GUILayout.Width(70));
-        notification.Target = (DialogNotificationTarget)EditorGUILayout.EnumPopup(notification.Target);
-        GUILayout.EndHorizontal();
-
-        if (notification.Target == DialogNotificationTarget.Other)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(new GUIContent("Name: ", "Exact name of target GameObject"), GUILayout.Width(50));
-            notification.TargetName = EditorGUILayout.TextField(notification.TargetName);
-            GUILayout.EndHorizontal();
-        }
-
-        if (notification.Type == DialogNotificationType.Other)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Value: ", GUILayout.Width(50));
-            notification.Value = GUILayout.TextField(notification.Value);
-            GUILayout.EndHorizontal();
-        }
-
         GUILayout.EndVertical();
         return ret;
+    }
+
+    void RemoveDuplicateNotifications(List<DialogOptionTrigger> sourceList)
+    {
+        List<DialogOptionTrigger> cleanList = new List<DialogOptionTrigger>();
+        for (int i = 0; i < sourceList.Count; i++)
+        {
+            bool found = false;
+            for (int cl = 0; cl < cleanList.Count; cl++)
+            {
+                if (cleanList[cl].GetType() == sourceList[i].GetType())
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                cleanList.Add(sourceList[i]);
+            }
+        }
+        sourceList.Clear();
+        sourceList.AddRange(cleanList);
     }
 
     void DisplayDialogNodeInspector(Rect r, Dialog d)
@@ -706,10 +762,10 @@ public class DialogEditor : EditorWindow
         GUILayout.BeginHorizontal();
         bool prevEnabled = GUI.enabled;
         if (d.Requirements.Count >= 6) { GUI.enabled = false; }
-        int index = EditorGUILayout.Popup(0, usableTypeNames.ToArray());
+        int index = EditorGUILayout.Popup(0, usableRequirementNames.ToArray());
         if (index > 0)
         {
-            BaseRequirement bs = ScriptableObject.CreateInstance(usableTypes[index]) as BaseRequirement;
+            BaseRequirement bs = ScriptableObject.CreateInstance(usableRequirementTypes[index]) as BaseRequirement;
             AddToAsset(bs);
             d.Requirements.Add(bs);
         }
@@ -769,7 +825,7 @@ public class DialogEditor : EditorWindow
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
-        GUILayout.Label(string.Format("({0}) {1}", dr.Target, dr.GetType().Name), EditorStyles.helpBox);
+        GUILayout.Label(string.Format("({0}) {1}", dr.Target, dr.CachedName), EditorStyles.helpBox);
         if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
         SerializedObject so = new SerializedObject(dr);
         SerializedProperty sp = so.GetIterator();
