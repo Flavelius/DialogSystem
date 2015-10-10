@@ -35,7 +35,8 @@ MonoBehaviour:
   options:
   - {fileID: 11416622}
   requirementMode: 0
-  requirements: []
+  requirements:
+  - {fileID: 11496206}
 --- !u!114 &11416622
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -96,6 +97,18 @@ MonoBehaviour:
   isRedirection: 0
   notifications:
   - type: 0
-    paramValue: 
+    paramValue: 0
     target: 0
     targetName: 
+--- !u!114 &11496206
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 876776014be25c341b5fd8f302e546a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  intValue: 0

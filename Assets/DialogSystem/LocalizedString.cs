@@ -2,21 +2,8 @@
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace Localization
+namespace DialogSystem.Localization
 {
-    public enum Language
-    {
-        EN_Default,
-        DE
-    }
-
-    public enum LocalizationFallback
-    {
-        Language,
-        DebugOutput,
-        EmptyString
-    }
-
     [System.Serializable]
     public class LocalizedString
     {

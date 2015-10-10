@@ -2,21 +2,21 @@
 using UnityEditor;
 using System.Collections;
 using DialogSystem;
+using DialogSystem.Localization;
 
 [CustomEditor(typeof(ConversationEngine))]
 public class ConversationEngineInspector : Editor
 {
-
     private LocalizedStringEditor activeStringEditor;
 
     public override void OnInspectorGUI()
     {
         ConversationEngine engine = target as ConversationEngine;
         engine.SavedDialogs = EditorGUILayout.ObjectField(new GUIContent("Dialogs"), engine.SavedDialogs, typeof(DialogCollection), false) as DialogCollection;
-        engine.fallback = (Localization.LocalizationFallback)EditorGUILayout.EnumPopup("Fallback:", engine.fallback);
-        if (engine.fallback == Localization.LocalizationFallback.Language)
+        engine.fallback = (LocalizationFallback)EditorGUILayout.EnumPopup("Fallback:", engine.fallback);
+        if (engine.fallback == LocalizationFallback.Language)
         {
-            engine.fallbackLanguage = (Localization.Language)EditorGUILayout.EnumPopup("Fallback language:", engine.fallbackLanguage);
+            engine.fallbackLanguage = (Language)EditorGUILayout.EnumPopup("Fallback language:", engine.fallbackLanguage);
         }
         GUILayout.BeginHorizontal();
         GUILayout.Label(new GUIContent("EndConversation fallback", "if no dialogoptions are available because of requirements for example, inject a default one, to end the conversation"), GUILayout.Width(150));

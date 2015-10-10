@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System;
-using Localization;
+using DialogSystem.Localization;
 
 namespace DialogSystem
 {

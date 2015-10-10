@@ -1,16 +1,17 @@
-﻿using UnityEngine;
-using System.Collections;
-using UnityEditor;
-using System.Collections.Generic;
+﻿using DialogSystem;
+using DialogSystem.Requirements.Internal;
 using System;
-using System.Xml;
-using System.Runtime.Serialization;
-using System.IO;
-using DialogSystem;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEngine;
 
 public class DialogEditor : EditorWindow
 {
     public DialogCollection sourceCollection;
+    List<Type> usableTypes = new List<Type>();
+    List<string> usableTypeNames = new List<string>();
 
     private GUIStyle headerStyle;
     private Color inspectorColor;
@@ -33,6 +34,15 @@ public class DialogEditor : EditorWindow
     private void ReleaseDialogID(int id)
     {
         reservedDialogIDs.Remove(id);
+    }
+
+    private List<Type> CollectUsableRequirementTypes()
+    {
+        List<Type> types = new List<Type>
+            (
+            Assembly.GetAssembly(typeof(BaseRequirement)).GetTypes().Where(i => i.IsSubclassOf(typeof(BaseRequirement)) && i.IsPublic && i.IsClass && !i.IsAbstract)
+            );
+        return types;
     }
 
     public void Cleanup()
@@ -123,6 +133,13 @@ public class DialogEditor : EditorWindow
         lblStyle.stretchWidth = true;
         inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
         buttonStyle = GUI.skin.GetStyle("PreButton");
+        usableTypes.Add(null);
+        usableTypeNames.Add("Add");
+        foreach (Type t in CollectUsableRequirementTypes())
+        {
+            usableTypes.Add(t);
+            usableTypeNames.Add(t.Name);
+        }
     }
 
     void Update()
@@ -158,21 +175,14 @@ public class DialogEditor : EditorWindow
     {
         Initialize();
         sourceCollection = collection;
+        reservedDialogIDs.Clear();
         for (int i = 0; i < sourceCollection.dialogs.Count; i++)
         {
             List<Dialog> subDialogs = new List<Dialog>();
             subDialogs = GetAllDialogsInChain(subDialogs, sourceCollection.dialogs[i]);
             for (int s = 0; s < subDialogs.Count; s++)
             {
-                if (!reservedDialogIDs.Contains(subDialogs[s].ID))
-                {
-                    reservedDialogIDs.Add(subDialogs[s].ID);
-                }
-                else //fix problems
-                {
-                    subDialogs[s].ID = ReserveDialogID();
-                    DirtyAsset();
-                }
+                reservedDialogIDs.Add(subDialogs[s].ID);
             }
         }
     }
@@ -456,10 +466,12 @@ public class DialogEditor : EditorWindow
         {
             for (int i = d.NextDialog.Requirements.Count; i-- > 0; )
             {
-                DialogRequirement req = d.NextDialog.Requirements[i];
-                GUI.color = req.GetColor();
-                string tooltip = string.Format("Target: {0}, Type: {1}, IntValue({2}), StringValue('{3}'), FloatValue({4})", req.Target, req.Type, req.IntValue, req.StringValue, req.FloatValue);
-                GUILayout.Box(new GUIContent(req.GetShortIdentifier(), tooltip), gs, GUILayout.Width(19), GUILayout.Height(15));
+                BaseRequirement req = d.NextDialog.Requirements[i];
+                if (req != null)
+                {
+                    GUI.color = req.GetColor();
+                    GUILayout.Box(new GUIContent(req.GetShortIdentifier(), req.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
+                }
             }
         }
         GUI.color = prev;
@@ -689,25 +701,34 @@ public class DialogEditor : EditorWindow
         GUILayout.Label("Requirements", headerStyle);
         if (d.Requirements.Count > 1)
         {
-            d.RequirementMode = (Dialog.DialogRequirementMode)EditorGUILayout.EnumPopup("Mode:",d.RequirementMode);
+            d.RequirementMode = (DialogRequirementMode)EditorGUILayout.EnumPopup("Mode:",d.RequirementMode);
         }
         GUILayout.BeginHorizontal();
         bool prevEnabled = GUI.enabled;
         if (d.Requirements.Count >= 6) { GUI.enabled = false; }
-        if (GUILayout.Button("Add", buttonStyle))
+        int index = EditorGUILayout.Popup(0, usableTypeNames.ToArray());
+        if (index > 0)
         {
-            d.Requirements.Add(new DialogRequirement());
+            BaseRequirement bs = ScriptableObject.CreateInstance(usableTypes[index]) as BaseRequirement;
+            AddToAsset(bs);
+            d.Requirements.Add(bs);
         }
         GUI.enabled = prevEnabled;
         if (GUILayout.Button("Remove all", buttonStyle))
         {
-            d.Requirements.Clear();
+            for (int i = d.Requirements.Count; i-- > 0; )
+            {
+                DestroyImmediate(d.Requirements[i], true);
+                d.Requirements.RemoveAt(i);
+            }
         }
         GUILayout.EndHorizontal();
         scrollbar = GUILayout.BeginScrollView(scrollbar, false, true);
         for (int i = d.Requirements.Count; i-- > 0; )
         {
-            if (!DrawInlineRequirement(d.Requirements[i]) | d.Requirements[i].Type == DialogRequirementType.None) {
+            if (d.Requirements[i] == null) { d.Requirements.RemoveAt(i); continue; }
+            if (!DrawInlineRequirement(d.Requirements[i])) {
+                DestroyImmediate(d.Requirements[i], true);
                 d.Requirements.RemoveAt(i); 
                 continue;
             }
@@ -721,15 +742,15 @@ public class DialogEditor : EditorWindow
         GUILayout.EndArea();
     }
 
-    void RemoveDuplicateRequirements(List<DialogRequirement> sourceList)
+    void RemoveDuplicateRequirements(List<BaseRequirement> sourceList)
     {
-        List<DialogRequirement> cleanList = new List<DialogRequirement>();
+        List<BaseRequirement> cleanList = new List<BaseRequirement>();
         for (int i = 0; i < sourceList.Count; i++)
         {
             bool found = false;
             for (int cl = 0; cl < cleanList.Count; cl++)
             {
-                if (cleanList[cl].Type == sourceList[i].Type & cleanList[cl].Target == sourceList[i].Target)
+                if (cleanList[cl].GetType() == sourceList[i].GetType())
                 {
                     found = true;
                     break;
@@ -744,41 +765,25 @@ public class DialogEditor : EditorWindow
         sourceList.AddRange(cleanList);
     }
 
-    bool DrawInlineRequirement(DialogRequirement dr)
+    bool DrawInlineRequirement(BaseRequirement dr)
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
+        GUILayout.Label(string.Format("({0}) {1}", dr.Target, dr.GetType().Name), EditorStyles.helpBox);
         if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Type: ", GUILayout.Width(50));
-        dr.Type = (DialogRequirementType)EditorGUILayout.EnumPopup(dr.Type);
-        GUILayout.EndHorizontal();
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("Target: ", GUILayout.Width(50));
-        dr.Target = (DialogRequirementTarget)EditorGUILayout.EnumPopup(dr.Target);
-        GUILayout.EndHorizontal();
-        if (dr.Type != DialogRequirementType.LifeTime)
+        SerializedObject so = new SerializedObject(dr);
+        SerializedProperty sp = so.GetIterator();
+        sp.NextVisible(true);
+        if (sp != null)
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Value: ", GUILayout.Width(60));
-            dr.IntValue = EditorGUILayout.IntField(dr.IntValue);
-            GUILayout.EndHorizontal();
+            while (sp.NextVisible(false))
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
+                EditorGUILayout.PropertyField(sp, GUIContent.none);
+                GUILayout.EndHorizontal();
+            }
         }
-        if (dr.Type == DialogRequirementType.LifeTime | dr.Type == DialogRequirementType.PastState)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Timespan: ", GUILayout.Width(60));
-            dr.FloatValue = EditorGUILayout.FloatField(dr.FloatValue);
-            GUILayout.EndHorizontal();
-        }
-        if (dr.Type == DialogRequirementType.EventLog)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Text:", GUILayout.Width(60));
-            dr.StringValue = EditorGUILayout.TextField(dr.StringValue);
-            GUILayout.EndHorizontal();
-        }
-
         GUILayout.EndVertical();
         return ret;
     }

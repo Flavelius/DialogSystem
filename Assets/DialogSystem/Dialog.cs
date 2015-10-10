@@ -2,18 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System;
-using Localization;
+using DialogSystem.Localization;
+using DialogSystem.Requirements;
+using DialogSystem.Requirements.Internal;
 
 namespace DialogSystem
 {
     public class Dialog: ScriptableObject
     {
-
-        public enum DialogRequirementMode
-        {
-            And,
-            Or
-        }
 
         [SerializeField, HideInInspector]
         private int id;
@@ -55,24 +51,20 @@ namespace DialogSystem
 
 
         [SerializeField, HideInInspector]
-        private List<DialogRequirement> requirements = new List<DialogRequirement>();
-        public List<DialogRequirement> Requirements
+        private List<BaseRequirement> requirements = new List<BaseRequirement>();
+        public List<BaseRequirement> Requirements
         {
             get { return requirements; }
             set { requirements = value; }
         }
 
-        public bool MeetsRequirements(IConversationRelevance target)
+        public bool MeetsRequirements(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo)
         {
             if (requirementMode == DialogRequirementMode.And)
             {
                 for (int i = 0; i < requirements.Count; i++)
                 {
-                    if (requirements[i].Target != target.Type)
-                    {
-                        continue;
-                    }
-                    if (!target.ValidateDialogRequirement(requirements[i]))
+                    if (!requirements[i].Evaluate(player, npc, worldInfo))
                     {
                         return false;
                     }
@@ -83,11 +75,7 @@ namespace DialogSystem
             {
                 for (int i = 0; i < requirements.Count; i++)
                 {
-                    if (requirements[i].Target != target.Type)
-                    {
-                        continue;
-                    }
-                    if (target.ValidateDialogRequirement(requirements[i]))
+                    if (requirements[i].Evaluate(player, npc, worldInfo))
                     {
                         return true;
                     }

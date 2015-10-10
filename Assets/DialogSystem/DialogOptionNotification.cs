@@ -1,10 +1,7 @@
 ﻿using UnityEngine;
-using System.Collections;
-using System.Runtime.Serialization;
 
 namespace DialogSystem
 {
-
     public enum DialogNotificationTarget
     {
         Player,
@@ -49,7 +46,7 @@ namespace DialogSystem
             set { targetName = value; }
         }
 
-        public void Notify(Dialog parent, IConversationRelevance npc, IConversationRelevance player, IConversationRelevance worldContext)
+        public void Notify(Dialog parent, IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorldInfo worldContext)
         {
             Debug.Log("TODO notifier string/ID to other function?");
             if (type == DialogNotificationType.DialogCompleted)
