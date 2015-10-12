@@ -2,7 +2,7 @@
 
 namespace DialogSystem.Requirements
 {
-    [ReadableName("Require Int Value")]
+    [ReadableName("Player Int Value")]
     public class RequireIntValue: Requirement_Player
     {
         public int intValue;

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace DialogSystem.Actions
 {
-    [ReadableName("Log player dialog completed")]
+    [ReadableName("player Log dialog completed")]
     public class LogDialogCompleted: DialogOptionAction
     {
         public override UnityEngine.Color GetColor()

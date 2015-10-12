@@ -777,8 +777,11 @@ public class DialogEditor : EditorWindow
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
+        GUILayout.BeginHorizontal();
         GUILayout.Label(tr.CachedName, EditorStyles.helpBox);
         if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
+        GUILayout.EndHorizontal();
+        GUILayout.Space(2);
         SerializedObject so = new SerializedObject(tr);
         SerializedProperty sp = so.GetIterator();
         sp.NextVisible(true);
@@ -946,8 +949,11 @@ public class DialogEditor : EditorWindow
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
+        GUILayout.BeginHorizontal();
         GUILayout.Label(dr.CachedName, EditorStyles.helpBox);
         if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
+        GUILayout.EndHorizontal();
+        GUILayout.Space(2);
         SerializedObject so = new SerializedObject(dr);
         SerializedProperty sp = so.GetIterator();
         sp.NextVisible(true);
