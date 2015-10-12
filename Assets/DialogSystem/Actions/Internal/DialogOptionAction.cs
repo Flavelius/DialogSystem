@@ -2,9 +2,9 @@
 using System.Collections;
 using System;
 
-namespace DialogSystem.Triggers
+namespace DialogSystem.Actions
 {
-    public abstract class DialogOptionTrigger: ScriptableObject
+    public abstract class DialogOptionAction: ScriptableObject
     {
         public abstract void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo);
 

@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace DialogSystem.Triggers
+namespace DialogSystem.Actions
 {
     [ReadableName("Log player dialog completed")]
-    public class LogDialogCompleted: DialogOptionTrigger
+    public class LogDialogCompleted: DialogOptionAction
     {
         public override UnityEngine.Color GetColor()
         {

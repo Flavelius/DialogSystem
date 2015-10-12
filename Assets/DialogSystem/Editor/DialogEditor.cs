@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using DialogSystem.Triggers;
+using DialogSystem.Actions;
 using DialogSystem.Internal;
 
 public class DialogEditor : EditorWindow
@@ -16,8 +16,8 @@ public class DialogEditor : EditorWindow
     List<Type> usableRequirementTypes = new List<Type>();
     List<string> usableRequirementNames = new List<string>();
 
-    List<Type> usableTriggerTypes = new List<Type>();
-    List<string> usableTriggerNames = new List<string>();
+    List<Type> usableActionTypes = new List<Type>();
+    List<string> usableActionNames = new List<string>();
 
     private GUIStyle headerStyle;
     private Color inspectorColor;
@@ -56,27 +56,27 @@ public class DialogEditor : EditorWindow
         }
     }
 
-    private void CollectUsableTriggerTypes()
+    private void CollectUsableActionTypes()
     {
-        usableTriggerTypes.Clear();
-        usableTriggerNames.Clear();
+        usableActionTypes.Clear();
+        usableActionNames.Clear();
         List<Type> types = new List<Type>
             (
-            Assembly.GetAssembly(typeof(DialogOptionTrigger)).GetTypes().Where(i => i.IsSubclassOf(typeof(DialogOptionTrigger)) && i.IsPublic && i.IsClass && !i.IsAbstract)
+            Assembly.GetAssembly(typeof(DialogOptionAction)).GetTypes().Where(i => i.IsSubclassOf(typeof(DialogOptionAction)) && i.IsPublic && i.IsClass && !i.IsAbstract)
             );
-        usableTriggerTypes.Add(null);
-        usableTriggerNames.Add("Add");
+        usableActionTypes.Add(null);
+        usableActionNames.Add("Add");
         foreach (Type t in types)
         {
-            usableTriggerTypes.Add(t);
+            usableActionTypes.Add(t);
             ReadableNameAttribute[] rns = t.GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
             if (rns.Length > 0)
             {
-                usableTriggerNames.Add(rns[0].Name);
+                usableActionNames.Add(rns[0].Name);
             }
             else
             {
-                usableTriggerNames.Add(t.Name);
+                usableActionNames.Add(t.Name);
             }
         }
     }
@@ -110,7 +110,7 @@ public class DialogEditor : EditorWindow
         inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
         buttonStyle = GUI.skin.GetStyle("PreButton");
         CollectUsableRequirementTypes();
-        CollectUsableTriggerTypes();
+        CollectUsableActionTypes();
         LoadIDTracker();
     }
 
@@ -138,7 +138,7 @@ public class DialogEditor : EditorWindow
 
     void OnEnable()
     {
-        CollectUsableTriggerTypes();
+        CollectUsableActionTypes();
         CollectUsableRequirementTypes();
     }
 
@@ -314,7 +314,7 @@ public class DialogEditor : EditorWindow
             }
             else
             {
-                DialogOptionTrigger tr = o as DialogOptionTrigger;
+                DialogOptionAction tr = o as DialogOptionAction;
                 if (tr != null)
                 {
                     if (!IsReferencedInChains(tr))
@@ -354,7 +354,7 @@ public class DialogEditor : EditorWindow
         return false;
     }
 
-    private bool IsReferencedInChains(DialogOptionTrigger tr)
+    private bool IsReferencedInChains(DialogOptionAction tr)
     {
         foreach (Dialog dl in sourceCollection.dialogs)
         {
@@ -364,7 +364,7 @@ public class DialogEditor : EditorWindow
             {
                 foreach (DialogOption dop in chainDialog.Options)
                 {
-                    if (dop.Triggers.Contains(tr))
+                    if (dop.Actions.Contains(tr))
                     {
                         return true;
                     }
@@ -511,7 +511,7 @@ public class DialogEditor : EditorWindow
             else
             {
                 branchDepth += 1;
-                if (d.Options[i].Triggers.Count > 0)
+                if (d.Options[i].Actions.Count > 0)
                 {
                     branchDepth += 1;
                 }
@@ -527,9 +527,9 @@ public class DialogEditor : EditorWindow
                         {
                             DeleteCleanupDialog(dI.NextDialog);
                         }
-                        for (int t = dI.Triggers.Count; t-- > 0; )
+                        for (int t = dI.Actions.Count; t-- > 0; )
                         {
-                            DestroyImmediate(dI.Triggers[t], true);
+                            DestroyImmediate(dI.Actions[t], true);
                         }
                         d.Options.Remove(dI);
                         DestroyImmediate(dI, true);
@@ -587,7 +587,7 @@ public class DialogEditor : EditorWindow
         {
             ret = -10;
         }
-        DrawInlineDialogOptionTriggers(new Rect(title.x + indentWidth, title.y + title.height, title.width, title.height + 10), option);
+        DrawInlineDialogOptionActions(new Rect(title.x + indentWidth, title.y + title.height, title.width, title.height + 10), option);
         if (option.NextDialog != null)
         {
             DrawInlineDialogRequirements(new Rect(title.x+indentWidth, title.y - (title.height+2), title.width, title.height+10), option);
@@ -631,7 +631,7 @@ public class DialogEditor : EditorWindow
         GUILayout.EndArea();
     }
 
-    void DrawInlineDialogOptionTriggers(Rect r, DialogOption d)
+    void DrawInlineDialogOptionActions(Rect r, DialogOption d)
     {
         GUILayout.BeginArea(r);
         GUILayout.BeginHorizontal();
@@ -643,9 +643,9 @@ public class DialogEditor : EditorWindow
         gs.contentOffset = new Vector2(-1, 0);
         gs.clipping = TextClipping.Overflow;
         gs.border = new RectOffset(1, 1, 1, 1);
-        for (int i = d.Triggers.Count; i-- > 0; )
+        for (int i = d.Actions.Count; i-- > 0; )
         {
-            DialogOptionTrigger dot = d.Triggers[i];
+            DialogOptionAction dot = d.Actions[i];
             GUI.color = dot.GetColor();
             GUILayout.Box(new GUIContent(dot.GetShortIdentifier(), dot.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
         }
@@ -733,48 +733,48 @@ public class DialogEditor : EditorWindow
         }
         GUILayout.EndScrollView();
         GUILayout.Space(10);
-        GUILayout.Label("Triggers", headerStyle);
+        GUILayout.Label("Actions", headerStyle);
         GUILayout.BeginHorizontal();
         bool prevEnabled = GUI.enabled;
-        if (dOption.Triggers.Count >= 6) { GUI.enabled = false; }
-        int index = EditorGUILayout.Popup(0, usableTriggerNames.ToArray());
+        if (dOption.Actions.Count >= 6) { GUI.enabled = false; }
+        int index = EditorGUILayout.Popup(0, usableActionNames.ToArray());
         if (index > 0)
         {
-            DialogOptionTrigger tr = ScriptableObject.CreateInstance(usableTriggerTypes[index]) as DialogOptionTrigger;
+            DialogOptionAction tr = ScriptableObject.CreateInstance(usableActionTypes[index]) as DialogOptionAction;
             AddToAsset(tr);
-            dOption.Triggers.Add(tr);
+            dOption.Actions.Add(tr);
         }
         GUI.enabled = prevEnabled;
         if (GUILayout.Button("Remove all", buttonStyle))
         {
-            for (int i = dOption.Triggers.Count; i-- > 0; )
+            for (int i = dOption.Actions.Count; i-- > 0; )
             {
-                DestroyImmediate(dOption.Triggers[i], true);
-                dOption.Triggers.RemoveAt(i);
+                DestroyImmediate(dOption.Actions[i], true);
+                dOption.Actions.RemoveAt(i);
             }
         }
         GUILayout.EndHorizontal();
         scrollbar2 = GUILayout.BeginScrollView(scrollbar2);
-        for (int i = dOption.Triggers.Count; i-- > 0; )
+        for (int i = dOption.Actions.Count; i-- > 0; )
         {
-            if (dOption.Triggers[i] == null) { dOption.Triggers.RemoveAt(i); continue; }
-            if (!InlineDisplayTriggerEditor(dOption.Triggers[i]))
+            if (dOption.Actions[i] == null) { dOption.Actions.RemoveAt(i); continue; }
+            if (!InlineDisplayOptionActionEditor(dOption.Actions[i]))
             {
-                DestroyImmediate(dOption.Triggers[i], true);
-                dOption.Triggers.RemoveAt(i);
+                DestroyImmediate(dOption.Actions[i], true);
+                dOption.Actions.RemoveAt(i);
                 continue;
             }
         }
         GUILayout.EndScrollView();
         if (GUILayout.Button("Close", buttonStyle))
         {
-            //RemoveDuplicateNotifications(dOption.Triggers);
+            //RemoveDuplicateNotifications(dOption.Actions);
             CloseSubInspector();
         }
         GUILayout.EndArea();
     }
 
-    bool InlineDisplayTriggerEditor(DialogOptionTrigger tr)
+    bool InlineDisplayOptionActionEditor(DialogOptionAction tr)
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
@@ -797,9 +797,9 @@ public class DialogEditor : EditorWindow
         return ret;
     }
 
-    void RemoveDuplicateTriggers(List<DialogOptionTrigger> sourceList)
+    void RemoveDuplicateActions(List<DialogOptionAction> sourceList)
     {
-        List<DialogOptionTrigger> cleanList = new List<DialogOptionTrigger>();
+        List<DialogOptionAction> cleanList = new List<DialogOptionAction>();
         for (int i = 0; i < sourceList.Count; i++)
         {
             bool found = false;

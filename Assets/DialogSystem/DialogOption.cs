@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System;
-using DialogSystem.Triggers;
+using DialogSystem.Actions;
 using DialogSystem.Localization;
 
 namespace DialogSystem
@@ -37,11 +37,11 @@ namespace DialogSystem
 
 
         [SerializeField, HideInInspector]
-        private List<DialogOptionTrigger> triggers = new List<DialogOptionTrigger>();
-        public List<DialogOptionTrigger> Triggers
+        private List<DialogOptionAction> actions = new List<DialogOptionAction>();
+        public List<DialogOptionAction> Actions
         {
-            get { return triggers; }
-            set { triggers = value; }
+            get { return actions; }
+            set { actions = value; }
         }
     }
 }

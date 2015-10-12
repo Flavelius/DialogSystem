@@ -9,6 +9,9 @@ namespace DialogSystem
     {
         [SerializeField, HideInInspector]
         private DialogCollection savedDialogs;
+        /// <summary>
+        /// The saved collection of dialogs to use for requests
+        /// </summary>
         public DialogCollection SavedDialogs
         {
             get { return savedDialogs; }
@@ -84,11 +87,11 @@ namespace DialogSystem
             {
                 string title = conversations[0].Title.GetString(language, fallback, fallbackLanguage);
                 string text = conversations[0].Text.GetString(language, fallback, fallbackLanguage);
-                return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
+                return Conversation.Construct(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
             }
             else if (availableTopics.Count > 1)
             {
-                Conversation c = new Conversation(-1, "", "", "", Conversation.ConversationType.TopicList, new List<Conversation.Answer>());
+                Conversation c = Conversation.Construct(-1, "", "", "", Conversation.ConversationType.TopicList, new List<Conversation.Answer>());
                 foreach (Dialog d in availableTopics)
                 {
                     string title = d.Title.GetString(language, fallback, fallbackLanguage);
@@ -125,7 +128,7 @@ namespace DialogSystem
                 {
                     string title = activeDialog.Title.GetString(language, fallback, fallbackLanguage);
                     string text = activeDialog.Text.GetString(language, fallback, fallbackLanguage);
-                    return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldContext, language));
+                    return Conversation.Construct(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldContext, language));
                 }
             }
             else
@@ -136,9 +139,9 @@ namespace DialogSystem
             if (answerIndex >= 0 && answerIndex < activeDialog.Options.Count)
             {
                 DialogOption chosenOption = activeDialog.Options[answerIndex];
-                for (int i = 0; i < chosenOption.Triggers.Count; i++)
+                for (int i = 0; i < chosenOption.Actions.Count; i++)
                 {
-                    chosenOption.Triggers[i].Execute(activeDialog, player, npc, worldContext);
+                    chosenOption.Actions[i].Execute(activeDialog, player, npc, worldContext);
                 }
                 if (chosenOption.NextDialog != null)
                 {
@@ -146,7 +149,7 @@ namespace DialogSystem
                     {
                         string title = chosenOption.NextDialog.Title.GetString(language, fallback, fallbackLanguage);
                         string text = chosenOption.NextDialog.Text.GetString(language, fallback, fallbackLanguage);
-                        return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldContext, language));
+                        return Conversation.Construct(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldContext, language));
                     }
                 }
             }
@@ -225,10 +228,14 @@ namespace DialogSystem
 
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class Conversation
     {
         public enum ConversationType { Single, TopicList }
-        public Conversation(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
+
+        private Conversation(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
         {
             ID = id;
             Title = title;
@@ -236,6 +243,10 @@ namespace DialogSystem
             Tag = tag;
             Answers = answers;
             Type = type;
+        }
+        public static Conversation Construct(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
+        {
+            return new Conversation(id, title, text, tag, type, answers);
         }
         public readonly int ID;
         public readonly string Npc;
