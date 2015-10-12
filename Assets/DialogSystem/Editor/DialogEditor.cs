@@ -105,7 +105,7 @@ public class DialogEditor : EditorWindow
             headerStyle.fontSize = 14;
             headerStyle.normal.textColor = new Color(0.7f, 0.6f, 0.6f);
         }
-        lblStyle = new GUIStyle(GUI.skin.GetStyle("flow overlay header upper left"));
+        lblStyle = new GUIStyle(GUI.skin.GetStyle("MeTransitionHead"));
         lblStyle.stretchWidth = true;
         inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
         buttonStyle = GUI.skin.GetStyle("PreButton");
@@ -681,16 +681,15 @@ public class DialogEditor : EditorWindow
         GUI.color = prev;
         GUILayout.Space(5);
         GUILayout.Label("Text", headerStyle);
+        GUILayout.Space(5);
+        GUILayout.BeginHorizontal();
         string tText = dOption.Text.Description;
         if (tText == null || tText.Length == 0)
         {
             tText = txtNotSetMsg;
         }
-        GUILayout.Label(tText, lblStyle);
-        GUILayout.Space(5);
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Edit", buttonStyle))
+        GUILayout.Label(tText, lblStyle, GUILayout.MaxWidth(154));
+        if (GUILayout.Button("Edit", buttonStyle, GUILayout.Width(40)))
         {
             activeStringEditor = new LocalizedStringEditor(dOption.Text, "Option text");
         }
@@ -828,37 +827,50 @@ public class DialogEditor : EditorWindow
         GUI.color = prev;
         GUILayout.Space(5);
         GUILayout.Label("Title", headerStyle);
+        GUILayout.Space(5);
+        GUILayout.BeginHorizontal();
         string dTitle = d.Title.Description;
         if (dTitle == null || dTitle.Length == 0)
         {
             dTitle = txtNotSetMsg;
         }
-        GUILayout.Label(dTitle, lblStyle);
-        GUILayout.Space(5);
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Edit", buttonStyle))
+        GUILayout.Label(dTitle, lblStyle, GUILayout.MaxWidth(154));
+        if (GUILayout.Button("Edit", buttonStyle, GUILayout.Width(40)))
         {
             activeStringEditor = new LocalizedStringEditor(d.Title, "Dialog title");
         }
         GUILayout.EndHorizontal();
         GUILayout.Space(5);
-        GUILayout.Label("Text", headerStyle);
-        string dText = d.Text.Description;
-        if (dText == null || dText.Length == 0)
-        {
-            dText = txtNotSetMsg;
-        }
-        GUILayout.Label(dText, lblStyle);
+        GUILayout.Label("Text" + (d.Texts.Count > 1 ? " (random)" : ""), headerStyle);
         GUILayout.Space(5);
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Edit", buttonStyle))
+        for (int i = 0; i < d.Texts.Count; i++)
         {
-            activeStringEditor = new LocalizedStringEditor(d.Text, "Dialog text");
+            string dtextsT = d.Texts[i].Description;
+            if (dtextsT == null || dtextsT.Length == 0)
+            {
+                dtextsT = txtNotSetMsg;
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(dtextsT, lblStyle, GUILayout.MaxWidth(134));
+            if (GUILayout.Button("Edit", buttonStyle, GUILayout.Width(40)))
+            {
+                activeStringEditor = new LocalizedStringEditor(d.Texts[i], "Dialog text");
+            }
+            if (GUILayout.Button("x", buttonStyle, GUILayout.Width(20)))
+            {
+                d.Texts.RemoveAt(i);
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
         }
-        GUILayout.EndHorizontal();
-        GUILayout.Space(5);
+        if (d.Texts.Count < 3)
+        {
+            if (GUILayout.Button("Add Variation", buttonStyle))
+            {
+                d.Texts.Add(new DialogSystem.Localization.LocalizedString(""));
+            }
+            GUILayout.Space(5);
+        }
         GUILayout.Label(new GUIContent("Tag", "User data"), headerStyle);
         GUILayout.Space(5);
         d.Tag = GUILayout.TextField(d.Tag);

@@ -23,7 +23,15 @@ namespace DialogSystem
         public LocalizedString Title = new LocalizedString("");
 
         [SerializeField, HideInInspector]
-        public LocalizedString Text = new LocalizedString("");
+        public List<LocalizedString> Texts = new List<LocalizedString>()
+        {
+            new LocalizedString("")
+        };
+
+        public LocalizedString GetText()
+        {
+            return Texts[UnityEngine.Random.Range(0, Texts.Count - 1)];
+        }
 
         [SerializeField, HideInInspector]
         private string tag = "";

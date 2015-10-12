@@ -31,7 +31,7 @@ namespace DialogSystem
                 {
                     if (GUILayout.Button(c.Answers[i].Text))
                     {
-                        c = conversationEngine.Answer(npc, player, world, c.ID, c.Answers[i].Index, language);
+                        c = conversationEngine.Answer(npc, player, world, c, c.Answers[i], language);
                         break;
                     }
                 }

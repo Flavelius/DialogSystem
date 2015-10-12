@@ -86,7 +86,7 @@ namespace DialogSystem
             if (availableTopics.Count == 1)
             {
                 string title = conversations[0].Title.GetString(language, fallback, fallbackLanguage);
-                string text = conversations[0].Text.GetString(language, fallback, fallbackLanguage);
+                string text = conversations[0].GetText().GetString(language, fallback, fallbackLanguage);
                 return Conversation.Construct(availableTopics[0].ID, title, text, availableTopics[0].Tag, Conversation.ConversationType.Single, GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
             }
             else if (availableTopics.Count > 1)
@@ -104,21 +104,22 @@ namespace DialogSystem
         }
 
         /// <summary>
-        /// Retrieves the topic following the supplied answer from a previous topic
+        /// Retrieves the dialog following the supplied answer from a previous conversation
         /// </summary>
         /// <param name="npc">Required, reference to the topics owning npc</param>
         /// <param name="player">Required, reference to the conversing player</param>
         /// <param name="worldContext">Not required, but could be, depending on the settings of certain dialogs</param>
-        /// <param name="dialogID">The id, of the dialog that is answered, or -1 if answer came from topicList</param>
+        /// <param name="previous">Conversation the answer is based on</param>
         /// <param name="answerIndex">The index of the answer of the answered dialog, or dialogID if answer came from topicList</param>
         /// <param name="language">The language the conversing player should receive an answer in</param>
         /// <returns></returns>
-        public Conversation Answer(IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext, int dialogID, int answerIndex, Language language)
+        public Conversation Answer(IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext, Conversation previous, Conversation.Answer answer, Language language)
         {
+            if (previous == null) { return null; }
             Dialog activeDialog = null;
-            if (dialogID == -1)
+            if (previous.ID == -1)
             {
-                activeDialog = GetDialog(answerIndex);
+                activeDialog = GetDialog(answer.Index);
                 if (activeDialog == null || !CheckAvailability(activeDialog, npc, player, worldContext))
                 {
                     Debug.LogWarning("Selection from topicList invalid");
@@ -127,18 +128,18 @@ namespace DialogSystem
                 else
                 {
                     string title = activeDialog.Title.GetString(language, fallback, fallbackLanguage);
-                    string text = activeDialog.Text.GetString(language, fallback, fallbackLanguage);
+                    string text = activeDialog.GetText().GetString(language, fallback, fallbackLanguage);
                     return Conversation.Construct(activeDialog.ID, title, text, activeDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(activeDialog, npc, player, worldContext, language));
                 }
             }
             else
             {
-                activeDialog = GetDialog(dialogID);
+                activeDialog = GetDialog(previous.ID);
             }
             if (activeDialog == null) { return null; }
-            if (answerIndex >= 0 && answerIndex < activeDialog.Options.Count)
+            if (answer.Index >= 0 && answer.Index < activeDialog.Options.Count)
             {
-                DialogOption chosenOption = activeDialog.Options[answerIndex];
+                DialogOption chosenOption = activeDialog.Options[answer.Index];
                 for (int i = 0; i < chosenOption.Actions.Count; i++)
                 {
                     chosenOption.Actions[i].Execute(activeDialog, player, npc, worldContext);
@@ -148,14 +149,14 @@ namespace DialogSystem
                     if (CheckAvailability(chosenOption.NextDialog, npc, player, worldContext))
                     {
                         string title = chosenOption.NextDialog.Title.GetString(language, fallback, fallbackLanguage);
-                        string text = chosenOption.NextDialog.Text.GetString(language, fallback, fallbackLanguage);
+                        string text = chosenOption.NextDialog.GetText().GetString(language, fallback, fallbackLanguage);
                         return Conversation.Construct(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, Conversation.ConversationType.Single, GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldContext, language));
                     }
                 }
             }
             else
             {
-                if (answerIndex == -1) { return null; } //close dialog
+                if (answer.Index == -1) { return null; } //close dialog
                 Debug.LogWarning("AnswerIndex out of bounds");
             }
             return null;
