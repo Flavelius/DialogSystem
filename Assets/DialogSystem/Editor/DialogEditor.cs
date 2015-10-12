@@ -7,10 +7,12 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using DialogSystem.Triggers;
+using DialogSystem.Internal;
 
 public class DialogEditor : EditorWindow
 {
     public DialogCollection sourceCollection;
+    public DialogIDTracker idTracker;
     List<Type> usableRequirementTypes = new List<Type>();
     List<string> usableRequirementNames = new List<string>();
 
@@ -26,8 +28,7 @@ public class DialogEditor : EditorWindow
 
     private int GetUniqueID(Dialog d)
     {
-        int iid = d.GetInstanceID();
-        return Mathf.Abs(iid);
+        return idTracker.GetNewID(sourceCollection);
     }
 
     private void CollectUsableRequirementTypes()
@@ -91,6 +92,47 @@ public class DialogEditor : EditorWindow
         {
             activeStringEditor.EndEdit();
             activeStringEditor = null;
+        }
+    }
+
+    public void Initialize()
+    {
+        if (headerStyle == null)
+        {
+            headerStyle = new GUIStyle(GUI.skin.GetStyle("TL SelectionBarPreview"));
+            headerStyle.stretchWidth = true;
+            headerStyle.fontStyle = FontStyle.Bold;
+            headerStyle.fontSize = 14;
+            headerStyle.normal.textColor = new Color(0.7f, 0.6f, 0.6f);
+        }
+        lblStyle = new GUIStyle(GUI.skin.GetStyle("flow overlay header upper left"));
+        lblStyle.stretchWidth = true;
+        inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
+        buttonStyle = GUI.skin.GetStyle("PreButton");
+        CollectUsableRequirementTypes();
+        CollectUsableTriggerTypes();
+        LoadIDTracker();
+    }
+
+    private void LoadIDTracker()
+    {
+        string[] idtrackerGUIDs = AssetDatabase.FindAssets("t:DialogIDTracker");
+        foreach (string s in idtrackerGUIDs)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(s);
+            object o = AssetDatabase.LoadAssetAtPath(path, typeof(DialogIDTracker));
+            if (o == null) { continue; }
+            DialogIDTracker dit = o as DialogIDTracker;
+            if (dit != null)
+            {
+                idTracker = dit;
+                break;
+            }
+        }
+        if (idTracker == null)
+        {
+            Debug.LogError("IDTracker could not be loaded, it must exist");
+            Close();
         }
     }
 
@@ -158,25 +200,7 @@ public class DialogEditor : EditorWindow
                 activeStringEditor = null;
             }
         }
-    }
-
-    public void Initialize()
-    {
-        if (headerStyle == null) 
-        {
-            headerStyle = new GUIStyle(GUI.skin.GetStyle("TL SelectionBarPreview"));
-            headerStyle.stretchWidth = true; 
-            headerStyle.fontStyle = FontStyle.Bold; 
-            headerStyle.fontSize = 14;
-            headerStyle.normal.textColor = new Color(0.7f, 0.6f, 0.6f);
-        }
-        lblStyle = new GUIStyle(GUI.skin.GetStyle("flow overlay header upper left"));
-        lblStyle.stretchWidth = true;
-        inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
-        buttonStyle = GUI.skin.GetStyle("PreButton");
-        CollectUsableRequirementTypes();
-        CollectUsableTriggerTypes();
-    }
+    } 
 
     void Update()
     {
@@ -213,13 +237,18 @@ public class DialogEditor : EditorWindow
         sourceCollection = collection;
     }
 
-    private void DeleteDialog(Dialog d)
+    private void DeleteCollectionDialog(Dialog d)
     {
         if (sourceCollection.dialogs.Remove(d))
         {
-            DestroyImmediate(d, true);
-            DirtyAsset();
+            DeleteDialog(d);
         }
+    }
+
+    private void DeleteDialog(Dialog d)
+    {
+        DestroyImmediate(d, true);
+        DirtyAsset();
     }
 
     private void DirtyAsset()
@@ -257,7 +286,7 @@ public class DialogEditor : EditorWindow
                     {
                         DestroyImmediate(currentItemToCheck.Options[i].NextDialog.Requirements[r], true);
                     }
-                    DestroyImmediate(currentItemToCheck.Options[i].NextDialog, true);
+                    DeleteDialog(currentItemToCheck.Options[i].NextDialog);
                     //
                 }
                 currentItemToCheck.Options[i].NextDialog = null;
@@ -369,8 +398,8 @@ public class DialogEditor : EditorWindow
         if (GUILayout.Button("New Dialog"))
         {
             Dialog d = ScriptableObject.CreateInstance<Dialog>();
-            AddToAsset(d);
             d.ID = GetUniqueID(d);
+            AddToAsset(d);
             sourceCollection.dialogs.Add(d);
             activeDialog = d;
         }
@@ -414,7 +443,7 @@ public class DialogEditor : EditorWindow
             {
                 DeleteCleanupDialog(sourceCollection.dialogs[i]);
                 if (sourceCollection.dialogs[i] == activeDialog) { CloseSubInspector(); activeDialog = null; }
-                DeleteDialog(sourceCollection.dialogs[i]);
+                DeleteCollectionDialog(sourceCollection.dialogs[i]);
             }
         }
         GUI.EndScrollView();
@@ -676,8 +705,8 @@ public class DialogEditor : EditorWindow
         if (GUILayout.Button("New Sub-Dialog", buttonStyle))
         {
             Dialog d = ScriptableObject.CreateInstance<Dialog>();
-            AddToAsset(d);
             d.ID = GetUniqueID(d);
+            AddToAsset(d);
             dOption.NextDialog = d;
             dOption.IsRedirection = false;
             CloseSubInspector();

@@ -14,12 +14,6 @@ namespace DialogSystem
         Or
     }
 
-    public enum DialogNotificationType
-    {
-        DialogCompleted,
-        Other
-    }
-
     public enum Language
     {
         EN_Default,
