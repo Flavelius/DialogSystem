@@ -785,7 +785,7 @@ public class DialogEditor : EditorWindow
         sp.NextVisible(true);
         if (sp != null)
         {
-            while (sp.NextVisible(false))
+            while (sp.NextVisible(true))
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
@@ -941,7 +941,7 @@ public class DialogEditor : EditorWindow
         sp.NextVisible(true);
         if (sp != null)
         {
-            while (sp.NextVisible(false))
+            while (sp.NextVisible(true))
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
