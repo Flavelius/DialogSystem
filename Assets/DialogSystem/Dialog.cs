@@ -11,7 +11,7 @@ namespace DialogSystem
     public class Dialog: ScriptableObject
     {
 
-        [SerializeField, HideInInspector]
+        [SerializeField]
         private int id;
         public int ID
         {
