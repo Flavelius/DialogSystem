@@ -116,6 +116,9 @@ public class DialogEditor : EditorWindow
 
     private void LoadIDTracker()
     {
+        object trackerObject = AssetDatabase.LoadAssetAtPath("Assets/DialogSystem/Internal/DialogIDTracker.asset", typeof(DialogIDTracker));
+        idTracker = trackerObject as DialogIDTracker;
+        if (idTracker != null) { return; }
         string[] idtrackerGUIDs = AssetDatabase.FindAssets("t:DialogIDTracker");
         foreach (string s in idtrackerGUIDs)
         {

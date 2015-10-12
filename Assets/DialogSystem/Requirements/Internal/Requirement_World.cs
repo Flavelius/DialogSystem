@@ -8,9 +8,10 @@ namespace DialogSystem.Requirements
 {
     public abstract class Requirement_World : BaseRequirement
     {
-        public override sealed bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldInfo)
+        public override sealed bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldContext)
         {
-            return Evaluate(worldInfo);
+            if (worldContext == null) { return true; }
+            return Evaluate(worldContext);
         }
 
         protected abstract bool Evaluate(IDialogRelevantWorld worldInfo);
