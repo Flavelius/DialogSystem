@@ -11,9 +11,7 @@ namespace DialogSystem.Requirements.Internal
     /// </summary>
     public abstract class BaseRequirement : ScriptableObject
     {
-        public abstract DialogTargetSpecifier Target { get; }
-
-        public abstract bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo);
+        public abstract bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldInfo);
 
         [NonSerialized]
         private string cachedName = "";

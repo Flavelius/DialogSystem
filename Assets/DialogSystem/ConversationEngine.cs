@@ -73,7 +73,7 @@ namespace DialogSystem
         /// <param name="worldContext">Not required, but could be, depending on the settings of certain dialogs</param>
         /// <param name="language">The language the conversing player should receive an answer in</param>
         /// <returns></returns>
-        public Conversation GetAvailableTopics(IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorldInfo worldContext, Language language)
+        public Conversation GetAvailableTopics(IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext, Language language)
         {
             List<Dialog> availableTopics = new List<Dialog>();
             for (int i = 0; i < conversations.Count; i++)
@@ -113,7 +113,7 @@ namespace DialogSystem
         /// <param name="answerIndex">The index of the answer of the answered dialog, or dialogID if answer came from topicList</param>
         /// <param name="language">The language the conversing player should receive an answer in</param>
         /// <returns></returns>
-        public Conversation Answer(IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorldInfo worldContext, int dialogID, int answerIndex, Language language)
+        public Conversation Answer(IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext, int dialogID, int answerIndex, Language language)
         {
             Dialog activeDialog = null;
             if (dialogID == -1)
@@ -197,13 +197,33 @@ namespace DialogSystem
             return null;
         }
 
-        private bool CheckAvailability(Dialog d, IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorldInfo worldInfo)
+        private bool CheckAvailability(Dialog d, IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext)
         {
-            if (!d.MeetsRequirements(player, npc, worldInfo)) { return false; }
-            return true;
+            if (d.RequirementMode == DialogRequirementMode.And)
+            {
+                for (int i = 0; i < d.Requirements.Count; i++)
+                {
+                    if (!d.Requirements[i].Evaluate(player, npc, worldContext))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            else if (d.RequirementMode == DialogRequirementMode.Or)
+            {
+                for (int i = 0; i < d.Requirements.Count; i++)
+                {
+                    if (d.Requirements[i].Evaluate(player, npc, worldContext))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
-        private List<Conversation.Answer> GetAvailableAnswers(Dialog d, IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorldInfo worldInfo, Language language)
+        private List<Conversation.Answer> GetAvailableAnswers(Dialog d, IDialogRelevantNPC npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext, Language language)
         {
             List<Conversation.Answer> answers = new List<Conversation.Answer>();
             for (int i = 0; i < d.Options.Count; i++)
@@ -213,7 +233,7 @@ namespace DialogSystem
                     string text = d.Options[i].Text.GetString(language, fallback, fallbackLanguage);
                     answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
                 }
-                else if (CheckAvailability(d.Options[i].NextDialog, npc, player, worldInfo))
+                else if (CheckAvailability(d.Options[i].NextDialog, npc, player, worldContext))
                 {
                     string text = d.Options[i].Text.GetString(language, fallback, fallbackLanguage);
                     answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
@@ -229,7 +249,7 @@ namespace DialogSystem
     }
 
     /// <summary>
-    /// 
+    /// Holds the data used to display a requested dialog
     /// </summary>
     public class Conversation
     {
@@ -248,12 +268,28 @@ namespace DialogSystem
         {
             return new Conversation(id, title, text, tag, type, answers);
         }
+
+        /// <summary>
+        /// used by the conversation engine to identify a dialog
+        /// </summary>
         public readonly int ID;
-        public readonly string Npc;
+
         public readonly string Title;
         public readonly string Text;
+
+        /// <summary>
+        /// User defined dialog tag (if <see cref="Type"/> is Single
+        /// </summary>
         public readonly string Tag;
+
+        /// <summary>
+        /// available answers, if <see cref="Type"/> is Single, else available dialogs
+        /// </summary>
         public readonly List<Answer> Answers;
+
+        /// <summary>
+        /// The type of dialog; if TopicList, it means more than one dialog is available and this conversation lists them in <see cref="Answers"/>
+        /// </summary>
         public readonly ConversationType Type;
 
         public class Answer

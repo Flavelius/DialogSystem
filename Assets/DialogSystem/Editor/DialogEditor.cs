@@ -934,7 +934,7 @@ public class DialogEditor : EditorWindow
     {
         bool ret = true;
         GUILayout.BeginVertical(EditorStyles.textArea);
-        GUILayout.Label(string.Format("({0}) {1}", dr.Target, dr.CachedName), EditorStyles.helpBox);
+        GUILayout.Label(dr.CachedName, EditorStyles.helpBox);
         if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
         SerializedObject so = new SerializedObject(dr);
         SerializedProperty sp = so.GetIterator();

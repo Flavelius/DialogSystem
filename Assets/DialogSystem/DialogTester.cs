@@ -84,7 +84,7 @@ namespace DialogSystem
         }
 
         [System.Serializable]
-        public class TestDialogWorld : IDialogRelevantWorldInfo
+        public class TestDialogWorld : IDialogRelevantWorld
         {
             [SerializeField]
             private string name = "World";

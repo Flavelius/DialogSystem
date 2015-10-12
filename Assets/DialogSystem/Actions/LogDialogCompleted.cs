@@ -14,7 +14,7 @@ namespace DialogSystem.Actions
             return Color.cyan;
         }
 
-        public override void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo)
+        public override void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldInfo)
         {
             player.OnDialogCompleted(activeDialog.ID);
         }

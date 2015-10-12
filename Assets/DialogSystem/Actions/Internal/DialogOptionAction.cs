@@ -6,7 +6,7 @@ namespace DialogSystem.Actions
 {
     public abstract class DialogOptionAction: ScriptableObject
     {
-        public abstract void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo);
+        public abstract void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldInfo);
 
         [NonSerialized]
         private string cachedName = "";

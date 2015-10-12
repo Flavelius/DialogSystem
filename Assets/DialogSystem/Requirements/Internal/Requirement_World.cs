@@ -8,16 +8,11 @@ namespace DialogSystem.Requirements
 {
     public abstract class Requirement_World : BaseRequirement
     {
-        public override DialogTargetSpecifier Target
-        {
-            get { return DialogTargetSpecifier.World; }
-        }
-
-        public override sealed bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo)
+        public override sealed bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldInfo)
         {
             return Evaluate(worldInfo);
         }
 
-        protected abstract bool Evaluate(IDialogRelevantWorldInfo worldInfo);
+        protected abstract bool Evaluate(IDialogRelevantWorld worldInfo);
     }
 }

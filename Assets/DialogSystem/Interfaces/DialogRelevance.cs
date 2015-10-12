@@ -11,7 +11,7 @@
 
     }
 
-    public interface IDialogRelevantWorldInfo
+    public interface IDialogRelevantWorld
     {
 
     }

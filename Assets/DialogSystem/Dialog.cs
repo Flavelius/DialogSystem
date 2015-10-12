@@ -57,31 +57,5 @@ namespace DialogSystem
             get { return requirements; }
             set { requirements = value; }
         }
-
-        public bool MeetsRequirements(IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorldInfo worldInfo)
-        {
-            if (requirementMode == DialogRequirementMode.And)
-            {
-                for (int i = 0; i < requirements.Count; i++)
-                {
-                    if (!requirements[i].Evaluate(player, npc, worldInfo))
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            else if (requirementMode == DialogRequirementMode.Or)
-            {
-                for (int i = 0; i < requirements.Count; i++)
-                {
-                    if (requirements[i].Evaluate(player, npc, worldInfo))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
     }
 }
