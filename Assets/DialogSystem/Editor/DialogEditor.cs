@@ -593,7 +593,10 @@ public class DialogEditor : EditorWindow
         DrawInlineDialogOptionActions(new Rect(title.x + indentWidth, title.y + title.height, title.width, title.height + 10), option);
         if (option.NextDialog != null)
         {
-            DrawInlineDialogRequirements(new Rect(title.x+indentWidth, title.y - (title.height+2), title.width, title.height+10), option);
+            if (!option.IgnoreRequirements)
+            {
+                DrawInlineDialogRequirements(new Rect(title.x + indentWidth, title.y - (title.height + 2), title.width, title.height + 10), option);
+            }
             if (GUI.Button(new Rect(title.x + title.width - 17, r.y+5, 17, 13), "x", gs))
             {
                 if (!option.IsRedirection)
@@ -734,7 +737,7 @@ public class DialogEditor : EditorWindow
             }
         }
         GUILayout.EndScrollView();
-        GUILayout.Space(10);
+        dOption.IgnoreRequirements = GUILayout.Toggle(dOption.IgnoreRequirements, "Ignore Requirements");
         GUILayout.Label("Actions", headerStyle);
         GUILayout.BeginHorizontal();
         bool prevEnabled = GUI.enabled;

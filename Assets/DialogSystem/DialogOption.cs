@@ -35,6 +35,13 @@ namespace DialogSystem
             set { isRedirection = value; }
         }
 
+        [SerializeField, HideInInspector]
+        private bool ignoreRequirements = false;
+        public bool IgnoreRequirements
+        {
+            get { return ignoreRequirements; }
+            set { ignoreRequirements = value; }
+        }
 
         [SerializeField, HideInInspector]
         private List<DialogOptionAction> actions = new List<DialogOptionAction>();

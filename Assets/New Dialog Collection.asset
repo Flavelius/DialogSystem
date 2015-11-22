@@ -30,6 +30,7 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 11429766}
   isRedirection: 0
+  ignoreRequirements: 0
   actions:
   - {fileID: 11473924}
 --- !u!114 &11415838
@@ -49,6 +50,7 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 11429766}
   isRedirection: 1
+  ignoreRequirements: 0
   actions: []
 --- !u!114 &11429766
 MonoBehaviour:
@@ -116,6 +118,7 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 11488256}
   isRedirection: 0
+  ignoreRequirements: 0
   actions: []
 --- !u!114 &11472500
 MonoBehaviour:
@@ -134,6 +137,7 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 0}
   isRedirection: 0
+  ignoreRequirements: 0
   actions: []
 --- !u!114 &11473924
 MonoBehaviour:
@@ -198,4 +202,5 @@ MonoBehaviour:
   tag: 
   nextDialog: {fileID: 0}
   isRedirection: 0
+  ignoreRequirements: 0
   actions: []

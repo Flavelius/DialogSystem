@@ -146,7 +146,7 @@ namespace DialogSystem
                 }
                 if (chosenOption.NextDialog != null)
                 {
-                    if (CheckAvailability(chosenOption.NextDialog, npc, player, worldContext))
+                    if (chosenOption.IgnoreRequirements || CheckAvailability(chosenOption.NextDialog, npc, player, worldContext))
                     {
                         string title = chosenOption.NextDialog.Title.GetString(language, fallback, fallbackLanguage);
                         string text = chosenOption.NextDialog.GetText().GetString(language, fallback, fallbackLanguage);
