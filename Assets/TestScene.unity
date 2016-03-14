@@ -202,10 +202,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _endConversationFallback:
     Description: End Conversation
-    strings: []
+    _strings: []
   Fallback: 1
   FallbackLanguage: 0
-  _savedDialogs: {fileID: 11400000, guid: 0f30a2c1ba1b55c43a583bc0ea781f26, type: 2}
+  _savedDialogs: {fileID: 11400000, guid: e6e3fb27e39c106469a3660883bd6b6f, type: 2}
   UseEndConversationfallback: 1
 --- !u!108 &2061911257
 Light:
@@ -263,19 +263,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52eb066dca73bee47bc17d5852227c79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  conversationEngine: {fileID: 2061911256}
-  language: 0
-  npc:
+  DialogEngine: {fileID: 2061911256}
+  Language: 0
+  _npc:
     _name: Npc
     FloatValue: 0
     IntValue: 0
     StringValue: 
-  player:
+  _player:
     _name: Player
     FloatValue: 0
     IntValue: 0
     StringValue: 
-  world:
+  _world:
     _name: World
     FloatValue: 0
     IntValue: 0
