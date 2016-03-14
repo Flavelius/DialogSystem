@@ -1,91 +1,105 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System;
+using UnityEngine;
 
-public class DialogTester : MonoBehaviour
+namespace DialogSystem
 {
-
-    public ConversationEngine conversationEngine;
-
-    public Localization.Language language;
-
-    private Conversation c;
-    void OnGUI()
+    public class DialogTester : MonoBehaviour
     {
-        if (c == null)
+        Conversation _activeConversation;
+        public ConversationEngine DialogEngine;
+
+        public DialogLanguage Language;
+
+        [SerializeField] TestDialogNpc _npc = new TestDialogNpc();
+
+        [SerializeField] TestDialogPlayer _player = new TestDialogPlayer();
+
+        [SerializeField] TestDialogWorld _world = new TestDialogWorld();
+
+        void OnGUI()
         {
-            if (GUILayout.Button("Get Dialog"))
+            if (_activeConversation == null)
             {
-                c = conversationEngine.GetAvailableTopics(npc, player, world, language);
-            }
-        }
-        else
-        {
-            if (c.Type == Conversation.ConversationType.Single)
-            {
-                GUILayout.Label(c.Title);
-                GUILayout.Label(c.Text);
-            }
-            for (int i = 0; i < c.Answers.Count; i++)
-            {
-                if (GUILayout.Button(c.Answers[i].Text))
+                if (GUILayout.Button("Get Dialog"))
                 {
-                    c = conversationEngine.Answer(npc, player, world, c.ID, c.Answers[i].Index, language);
+                    _activeConversation = DialogEngine.GetAvailableTopics(_npc, _player, _world, Language);
+                }
+            }
+            else
+            {
+                if (_activeConversation.Type == ConversationType.Single)
+                {
+                    GUILayout.Label(_activeConversation.Title);
+                    GUILayout.Label(_activeConversation.Text);
+                }
+                for (var i = 0; i < _activeConversation.Answers.Count; i++)
+                {
+                    if (!GUILayout.Button(_activeConversation.Answers[i].Text)) continue;
+                    _activeConversation = DialogEngine.Answer(_npc, _player, _world, _activeConversation, _activeConversation.Answers[i], Language);
                     break;
                 }
             }
         }
-    }
 
-    [SerializeField]
-    private TestDialogEntity npc = new TestDialogEntity();
-    [SerializeField]
-    private TestDialogEntity player = new TestDialogEntity();
-    [SerializeField]
-    private TestDialogEntity world = new TestDialogEntity();
-
-
-    [System.Serializable]
-    public class TestDialogEntity : IConversationRelevance
-    {
-
-        private string name = "Npc";
-        public string Name
+        [Serializable]
+        public class TestDialogNpc : IDialogRelevantNpc
         {
-            get { return name; }
-            set { name = value; }
-        }
+            [SerializeField] string _name = "Npc";
+            public float FloatValue;
 
-        public int intValue;
-        public string stringValue;
-        public float floatValue;
+            public int IntValue;
 
-        public bool ValidateDialogRequirement(IDialogRequirement req)
-        {
-            switch (req.Type)
+            public string StringValue;
+
+            public string Name
             {
-                case DialogRequirementType.State:
-                case DialogRequirementType.PastState:
-                case DialogRequirementType.Flag:
-                    return intValue == req.IntValue;
-                case DialogRequirementType.EventLog:
-                    return stringValue == req.StringValue;
-                case DialogRequirementType.LifeTime:
-                    return floatValue > req.FloatValue;
-                default:
-                    return true;
+                get { return _name; }
+                set { _name = value; }
             }
         }
 
-        public void OnDialogNotification(IConversationRelevance player, IConversationRelevance npc, IDialogNotification notification)
+        [Serializable]
+        public class TestDialogPlayer : IDialogRelevantPlayer
         {
-            Debug.Log(Name + " received notification: " + notification.Type + " with value: " + notification.Value);
+            [SerializeField] string _name = "Player";
+            public float FloatValue;
+
+            public int IntValue;
+
+            public string StringValue;
+
+            public string Name
+            {
+                get { return _name; }
+                set { _name = value; }
+            }
+
+            int IDialogRelevantPlayer.GetIntValue()
+            {
+                return IntValue;
+            }
+
+            void IDialogRelevantPlayer.OnDialogCompleted(int id)
+            {
+                Debug.Log(Name+": Dialog completed: " + id);
+            }
         }
 
-
-        public DialogRequirementTarget Type
+        [Serializable]
+        public class TestDialogWorld : IDialogRelevantWorld
         {
-            get { return DialogRequirementTarget.Npc; }
+            [SerializeField] string _name = "World";
+            public float FloatValue;
+
+            public int IntValue;
+
+            public string StringValue;
+
+            public string Name
+            {
+                get { return _name; }
+                set { _name = value; }
+            }
         }
     }
-
 }

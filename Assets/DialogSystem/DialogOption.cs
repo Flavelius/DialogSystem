@@ -1,77 +1,52 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using System.Xml;
-using System.Runtime.Serialization;
-using System;
-using Localization;
+﻿using System.Collections.Generic;
+using DialogSystem.Actions;
+using DialogSystem.Localization;
+using UnityEngine;
 
 namespace DialogSystem
 {
-
-    [DataContract(Name = "DialogOption")]
-    public class DialogOption
+    public class DialogOption : ScriptableObject
     {
-        public DialogOption():this("Not Set") { }
+        [SerializeField, HideInInspector] List<DialogOptionAction> _actions = new List<DialogOptionAction>();
 
-        public DialogOption(string title)
-        {
-            text = new LocalizedString(title);
-            tag = "";
-        }
+        [SerializeField, HideInInspector] bool _ignoreRequirements;
 
-        [SerializeField, HideInInspector]
-        private LocalizedString text;
-        [DataMember]
-        public LocalizedString Text
-        {
-            get { return text; }
-            set { text = value; }
-        }
+        [SerializeField, HideInInspector] bool _isRedirection;
 
-        public string GetText(Language language, LocalizationFallback fallback, Language fallbackLanguage)
-        {
-            if (text == null)
-            {
-                return "Not Set";
-            }
-            return text.GetString(language, fallback, fallbackLanguage);
-        }
+        [SerializeField, HideInInspector] Dialog _nextDialog;
 
-        [SerializeField, HideInInspector]
-        private string tag = "";
-        [DataMember]
+        [SerializeField, HideInInspector] string _tag = "";
+
+        [SerializeField, HideInInspector] public LocalizedString Text = new LocalizedString("");
+
         public string Tag
         {
-            get { return tag??""; }
-            set { tag = value; }
+            get { return _tag ?? ""; }
+            set { _tag = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private Dialog nextDialog;
-        [DataMember]
         public Dialog NextDialog
         {
-            get { return nextDialog; }
-            set { nextDialog = value; }
+            get { return _nextDialog; }
+            set { _nextDialog = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private bool isRedirection = false;
-        [DataMember]
         public bool IsRedirection
         {
-            get { return isRedirection; }
-            set { isRedirection = value; }
+            get { return _isRedirection; }
+            set { _isRedirection = value; }
         }
 
-
-        [SerializeField, HideInInspector]
-        private List<DialogOptionNotification> notifications = new List<DialogOptionNotification>();
-        [DataMember]
-        public List<DialogOptionNotification> Notifications
+        public bool IgnoreRequirements
         {
-            get { return notifications; }
-            set { notifications = value; }
+            get { return _ignoreRequirements; }
+            set { _ignoreRequirements = value; }
+        }
+
+        public List<DialogOptionAction> Actions
+        {
+            get { return _actions; }
+            set { _actions = value; }
         }
     }
 }

@@ -26,6 +26,8 @@ sysinfo.txt
 .DS_Store
 .AppleDouble
 .LSOverride
+_Resharper.Caches
+ProjectSettings
 
 # Thumbnails
 ._*
@@ -62,3 +64,4 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+*.suo
