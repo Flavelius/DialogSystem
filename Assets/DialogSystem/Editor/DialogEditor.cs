@@ -593,7 +593,18 @@ namespace DialogSystem
             var tTitle = option.Text.Description;
             if (string.IsNullOrEmpty(tTitle))
             {
-                tTitle = TxtNotSetMsg;
+                tTitle = option.Text.GetString(DialogLanguage.EN_Default, LocalizationFallback.EmptyString);
+                if (string.IsNullOrEmpty(tTitle))
+                {
+                    tTitle = TxtNotSetMsg;
+                }
+                else
+                {
+                    if (tTitle.Length > 50)
+                    {
+                        tTitle = string.Format("{0}[..]",tTitle.Substring(0, 50));
+                    }
+                }
             }
             if (GUI.Button(rect, tTitle, gs))
             {

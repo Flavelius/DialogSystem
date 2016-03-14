@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace DialogSystem.Localization
 {
@@ -31,9 +32,9 @@ namespace DialogSystem.Localization
             {
                 return false;
             }
-            GUILayout.BeginHorizontal();
+            GUILayout.BeginHorizontal(GUILayout.ExpandHeight(true));
             GUILayout.FlexibleSpace();
-            GUILayout.BeginVertical(EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).GetStyle("GroupBox"));
+            GUILayout.BeginVertical(EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).GetStyle("GroupBox"), GUILayout.ExpandHeight(true));
             GUILayout.Space(5);
             GUILayout.Label("Editing: " + _targetIdentifier, EditorStyles.helpBox);
             if (_needsDescription)
@@ -59,7 +60,7 @@ namespace DialogSystem.Localization
                     _target.Strings.Add(new LocalizedString.LanguageString((DialogLanguage) currentLangIndex, ""));
                 }
             }
-            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.MinHeight(150));
+            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandHeight(true));
             var removeIndex = -1;
             for (var i = 0; i < _target.Strings.Count; i++)
             {

@@ -9,7 +9,10 @@ namespace DialogSystem.Localization
     {
         [SerializeField, HideInInspector] public string Description;
 
-        [SerializeField, HideInInspector] List<LanguageString> strings = new List<LanguageString>();
+        // ReSharper disable once FieldCanBeMadeReadOnly.Local
+        [SerializeField, HideInInspector] List<LanguageString> _strings = new List<LanguageString>();
+
+        public static readonly LocalizedString Empty = new LocalizedString("");
 
         public LocalizedString(string description)
         {
@@ -18,7 +21,7 @@ namespace DialogSystem.Localization
 
         public List<LanguageString> Strings
         {
-            get { return strings; }
+            get { return _strings; }
         }
 
         public string GetString(DialogLanguage lang, LocalizationFallback fallback, DialogLanguage fallbackLanguage = DialogLanguage.EN_Default)
@@ -43,7 +46,6 @@ namespace DialogSystem.Localization
                     goto default;
                 case LocalizationFallback.EmptyString:
                     return "";
-                case LocalizationFallback.DebugOutput:
                 default:
                     return string.Format("LocalizedString not found: {0}", Description);
             }
