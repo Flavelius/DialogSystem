@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using DialogSystem.Actions;
+using DialogSystem.Internal;
 using DialogSystem.Localization;
 using DialogSystem.Requirements;
 using UnityEditor;

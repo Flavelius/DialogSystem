@@ -1,4 +1,6 @@
-﻿namespace DialogSystem.Requirements
+﻿using DialogSystem.Internal;
+
+namespace DialogSystem.Requirements
 {
     public abstract class DialogRequirement : DialogAttribute
     {

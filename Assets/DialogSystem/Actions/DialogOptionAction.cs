@@ -1,4 +1,6 @@
-﻿namespace DialogSystem.Actions
+﻿using DialogSystem.Internal;
+
+namespace DialogSystem.Actions
 {
     public abstract class DialogOptionAction : DialogAttribute
     {

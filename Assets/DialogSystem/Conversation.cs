@@ -9,7 +9,7 @@ namespace DialogSystem
     public class Conversation
     {
         /// <summary>
-        ///     available answers, if <see cref="Type" /> is Single, else available dialogs
+        ///     available answers, if <see cref="Type" /> == Single, or otherwise list of requestable dialogs
         /// </summary>
         public readonly List<Answer> Answers;
 
@@ -19,12 +19,18 @@ namespace DialogSystem
         public readonly int ID;
 
         /// <summary>
-        ///     User defined dialog tag (if <see cref="Type" /> is Single
+        ///     User defined dialog tag (if <see cref="Type" /> == Single)
         /// </summary>
         public readonly string Tag;
 
+        /// <summary>
+        /// If <see cref="Type"/> == Single, this is the text of the dialog
+        /// </summary>
         public readonly string Text;
 
+        /// <summary>
+        /// If <see cref="Type"/> == Single, this is the title of the dialog
+        /// </summary>
         public readonly string Title;
 
         /// <summary>
@@ -33,7 +39,7 @@ namespace DialogSystem
         /// </summary>
         public readonly ConversationType Type;
 
-        Conversation(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
+        public Conversation(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
         {
             ID = id;
             Title = title;
@@ -43,10 +49,10 @@ namespace DialogSystem
             Type = type;
         }
 
-        public static Conversation Create(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
-        {
-            return new Conversation(id, title, text, tag, type, answers);
-        }
+        //public static Conversation Create(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
+        //{
+        //    return new Conversation(id, title, text, tag, type, answers);
+        //}
 
         public class Answer
         {

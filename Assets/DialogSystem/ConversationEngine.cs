@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using DialogSystem.Internal;
 using DialogSystem.Localization;
 using UnityEngine;
 
@@ -80,12 +81,12 @@ namespace DialogSystem
             {
                 var title = _conversations[0].Title.GetString(language, Fallback, FallbackLanguage);
                 var text = _conversations[0].GetText().GetString(language, Fallback, FallbackLanguage);
-                return Conversation.Create(availableTopics[0].ID, title, text, availableTopics[0].Tag, ConversationType.Single,
+                return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, ConversationType.Single,
                     GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
             }
             if (availableTopics.Count > 1)
             {
-                var c = Conversation.Create(-1, "", "", "", ConversationType.TopicList, new List<Conversation.Answer>());
+                var c = new Conversation(-1, "", "", "", ConversationType.TopicList, new List<Conversation.Answer>());
                 for (var i = 0; i < availableTopics.Count; i++)
                 {
                     var title = availableTopics[i].Title.GetString(language, Fallback, FallbackLanguage);
@@ -125,7 +126,7 @@ namespace DialogSystem
                 }
                 var title = activeDialog.Title.GetString(language, Fallback, FallbackLanguage);
                 var text = activeDialog.GetText().GetString(language, Fallback, FallbackLanguage);
-                return Conversation.Create(activeDialog.ID, title, text, activeDialog.Tag, ConversationType.Single,
+                return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, ConversationType.Single,
                     GetAvailableAnswers(activeDialog, npc, player, worldContext, language));
             }
             activeDialog = GetDialog(previous.ID);
@@ -145,7 +146,7 @@ namespace DialogSystem
                 {
                     var title = chosenOption.NextDialog.Title.GetString(language, Fallback, FallbackLanguage);
                     var text = chosenOption.NextDialog.GetText().GetString(language, Fallback, FallbackLanguage);
-                    return Conversation.Create(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, ConversationType.Single,
+                    return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, ConversationType.Single,
                         GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldContext, language));
                 }
             }

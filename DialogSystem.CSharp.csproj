@@ -67,17 +67,17 @@
     <Compile Include="Assets\DialogSystem\Actions\LogDialogCompleted.cs" />
     <Compile Include="Assets\DialogSystem\Conversation.cs" />
     <Compile Include="Assets\DialogSystem\ConversationEngine.cs" />
-    <Compile Include="Assets\DialogSystem\Dialog.cs" />
-    <Compile Include="Assets\DialogSystem\DialogAttribute.cs" />
     <Compile Include="Assets\DialogSystem\DialogCollection.cs" />
-    <Compile Include="Assets\DialogSystem\DialogOption.cs" />
-    <Compile Include="Assets\DialogSystem\DialogRelevance.cs" />
-    <Compile Include="Assets\DialogSystem\DialogTester.cs" />
     <Compile Include="Assets\DialogSystem\Enums.cs" />
+    <Compile Include="Assets\DialogSystem\Interfaces.cs" />
+    <Compile Include="Assets\DialogSystem\Internal\Dialog.cs" />
+    <Compile Include="Assets\DialogSystem\Internal\DialogAttribute.cs" />
+    <Compile Include="Assets\DialogSystem\Internal\DialogOption.cs" />
     <Compile Include="Assets\DialogSystem\Localization\LocalizedString.cs" />
     <Compile Include="Assets\DialogSystem\ReadableNameAttribute.cs" />
     <Compile Include="Assets\DialogSystem\Requirements\DialogRequirement.cs" />
     <Compile Include="Assets\DialogSystem\Requirements\RequireIntValue.cs" />
+    <Compile Include="Assets\DialogSystem\Test\DialogTester.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\DialogSystem\HowToExtend.txt" />

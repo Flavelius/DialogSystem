@@ -3,7 +3,7 @@ using DialogSystem.Localization;
 using DialogSystem.Requirements;
 using UnityEngine;
 
-namespace DialogSystem
+namespace DialogSystem.Internal
 {
     public class Dialog : ScriptableObject
     {

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using DialogSystem.Internal;
 using UnityEngine;
 
 namespace DialogSystem

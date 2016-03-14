@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace DialogSystem
+namespace DialogSystem.Internal
 {
     public class DialogAttribute: ScriptableObject
     {

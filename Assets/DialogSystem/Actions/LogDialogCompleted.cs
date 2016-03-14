@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using DialogSystem.Internal;
+using UnityEngine;
 
 namespace DialogSystem.Actions
 {

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using DialogSystem.Localization;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
-namespace DialogSystem.Localization
+namespace DialogSystem
 {
     public class LocalizedStringEditor
     {

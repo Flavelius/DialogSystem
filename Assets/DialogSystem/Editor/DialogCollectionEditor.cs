@@ -1,19 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
-using DialogSystem;
 
-[CustomEditor(typeof(DialogCollection))]
-public class DialogCollectionEditor : Editor
+namespace DialogSystem
 {
-    public override void OnInspectorGUI()
+    [CustomEditor(typeof (DialogCollection))]
+    public class DialogCollectionEditor : Editor
     {
-        if (GUILayout.Button("Edit"))
+        public override void OnInspectorGUI()
         {
-            DialogEditor.OpenEdit((target as DialogCollection));
+            if (GUILayout.Button("Edit"))
+            {
+                DialogEditor.OpenEdit(target as DialogCollection);
+            }
         }
     }
 }
