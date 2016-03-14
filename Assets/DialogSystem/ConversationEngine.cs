@@ -86,14 +86,14 @@ namespace DialogSystem
             }
             if (availableTopics.Count > 1)
             {
-                var c = new Conversation(-1, "", "", "", ConversationType.TopicList, new List<Conversation.Answer>());
+                var answers = new List<Conversation.Answer>();
                 for (var i = 0; i < availableTopics.Count; i++)
                 {
                     var title = availableTopics[i].Title.GetString(language, Fallback, FallbackLanguage);
                     var ca = new Conversation.Answer(availableTopics[i].ID, title, availableTopics[i].Tag);
-                    c.Answers.Add(ca);
+                    answers.Add(ca);
                 }
-                return c;
+                return new Conversation(-1, "", "", "", ConversationType.TopicList, answers);
             }
             return null;
         }

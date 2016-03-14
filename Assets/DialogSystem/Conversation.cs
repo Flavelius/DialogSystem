@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace DialogSystem
 {
@@ -11,7 +12,7 @@ namespace DialogSystem
         /// <summary>
         ///     available answers, if <see cref="Type" /> == Single, or otherwise list of requestable dialogs
         /// </summary>
-        public readonly List<Answer> Answers;
+        public readonly ReadOnlyCollection<Answer> Answers;
 
         /// <summary>
         ///     used by the conversation engine to identify a dialog
@@ -45,7 +46,7 @@ namespace DialogSystem
             Title = title;
             Text = text;
             Tag = tag;
-            Answers = answers;
+            Answers = answers.AsReadOnly();
             Type = type;
         }
 
