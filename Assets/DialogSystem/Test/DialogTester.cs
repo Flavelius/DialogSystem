@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace DialogSystem
+namespace DialogSystem.Test
 {
     public class DialogTester : MonoBehaviour
     {
@@ -10,10 +10,13 @@ namespace DialogSystem
 
         public DialogLanguage Language;
 
+        // ReSharper disable once FieldCanBeMadeReadOnly.Local
         [SerializeField] TestDialogNpc _npc = new TestDialogNpc();
 
+        // ReSharper disable once FieldCanBeMadeReadOnly.Local
         [SerializeField] TestDialogPlayer _player = new TestDialogPlayer();
 
+        // ReSharper disable once FieldCanBeMadeReadOnly.Local
         [SerializeField] TestDialogWorld _world = new TestDialogWorld();
 
         void OnGUI()
