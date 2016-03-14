@@ -14,7 +14,7 @@ namespace DialogSystem
         Or
     }
 
-    public enum Language
+    public enum DialogLanguage
     {
         EN_Default,
         DE
@@ -25,5 +25,11 @@ namespace DialogSystem
         Language,
         DebugOutput,
         EmptyString
+    }
+
+    public enum ConversationType
+    {
+        Single,
+        TopicList
     }
 }

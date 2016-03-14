@@ -1,33 +1,29 @@
-﻿using UnityEngine;
+﻿using System;
 using System.Collections.Generic;
-using UnityEditor;
+using UnityEngine;
 
 namespace DialogSystem.Localization
 {
-    [System.Serializable]
+    [Serializable]
     public class LocalizedString
     {
+        [SerializeField, HideInInspector] public string Description;
+
+        [SerializeField, HideInInspector] List<LanguageString> strings = new List<LanguageString>();
+
         public LocalizedString(string description)
         {
             Description = description;
         }
 
-        [SerializeField, HideInInspector]
-        public string Description;
-
-        [SerializeField, HideInInspector]
-        private List<LanguageString> strings = new List<LanguageString>();
         public List<LanguageString> Strings
         {
-            get
-            {
-                return strings;
-            }
+            get { return strings; }
         }
 
-        public string GetString(Language lang, LocalizationFallback fallback, Language fallbackLanguage = Language.EN_Default)
+        public string GetString(DialogLanguage lang, LocalizationFallback fallback, DialogLanguage fallbackLanguage = DialogLanguage.EN_Default)
         {
-            for (int i = 0; i < Strings.Count; i++)
+            for (var i = 0; i < Strings.Count; i++)
             {
                 if (Strings[i].language == lang)
                 {
@@ -37,7 +33,7 @@ namespace DialogSystem.Localization
             switch (fallback)
             {
                 case LocalizationFallback.Language:
-                    for (int i = 0; i < Strings.Count; i++)
+                    for (var i = 0; i < Strings.Count; i++)
                     {
                         if (Strings[i].language == fallbackLanguage)
                         {
@@ -53,17 +49,19 @@ namespace DialogSystem.Localization
             }
         }
 
-        [System.Serializable]
+        [Serializable]
         public class LanguageString
         {
-            public LanguageString(Language lang = Language.EN_Default)
+            public DialogLanguage language;
+            public string Text;
+
+            public LanguageString(DialogLanguage lang = DialogLanguage.EN_Default)
             {
                 language = lang;
                 Text = "Not Set";
             }
-            public Language language;
-            public string Text;
-            public LanguageString(Language lang, string txt)
+
+            public LanguageString(DialogLanguage lang, string txt)
             {
                 language = lang;
                 Text = txt;

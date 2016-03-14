@@ -1,69 +1,63 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using System;
+﻿using System.Collections.Generic;
 using DialogSystem.Localization;
 using DialogSystem.Requirements;
-using DialogSystem.Requirements.Internal;
+using UnityEngine;
 
 namespace DialogSystem
 {
-    public class Dialog: ScriptableObject
+    public class Dialog : ScriptableObject
     {
+        [SerializeField] int _id;
 
-        [SerializeField]
-        private int id;
-        public int ID
-        {
-            get { return id; }
-            set { id = value; }
-        }
+        [SerializeField, HideInInspector] List<DialogOption> _options = new List<DialogOption>();
 
-        [SerializeField, HideInInspector]
-        public LocalizedString Title = new LocalizedString("");
+        [SerializeField, HideInInspector] DialogRequirementMode _requirementMode = DialogRequirementMode.And;
 
-        [SerializeField, HideInInspector]
-        public List<LocalizedString> Texts = new List<LocalizedString>()
+
+        [SerializeField, HideInInspector] List<DialogRequirement> _requirements = new List<DialogRequirement>();
+
+        [SerializeField, HideInInspector] string _tag = "";
+
+        [SerializeField, HideInInspector] public List<LocalizedString> Texts = new List<LocalizedString>
         {
             new LocalizedString("")
         };
 
-        public LocalizedString GetText()
+        [SerializeField, HideInInspector] public LocalizedString Title = new LocalizedString("");
+
+        public int ID
         {
-            return Texts[UnityEngine.Random.Range(0, Texts.Count - 1)];
+            get { return _id; }
+            set { _id = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private string tag = "";
         public string Tag
         {
-            get { return tag??""; }
-            set { tag = value; }
+            get { return _tag ?? ""; }
+            set { _tag = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private List<DialogOption> options = new List<DialogOption>();
         public List<DialogOption> Options
         {
-            get { return options; }
-            set { options = value; }
+            get { return _options; }
+            set { _options = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private DialogRequirementMode requirementMode = DialogRequirementMode.And;
         public DialogRequirementMode RequirementMode
         {
-            get { return requirementMode; }
-            set { requirementMode = value; }
+            get { return _requirementMode; }
+            set { _requirementMode = value; }
         }
 
-
-        [SerializeField, HideInInspector]
-        private List<BaseRequirement> requirements = new List<BaseRequirement>();
-        public List<BaseRequirement> Requirements
+        public List<DialogRequirement> Requirements
         {
-            get { return requirements; }
-            set { requirements = value; }
+            get { return _requirements; }
+            set { _requirements = value; }
+        }
+
+        public LocalizedString GetText()
+        {
+            return Texts[Random.Range(0, Texts.Count - 1)];
         }
     }
 }

@@ -1,6 +1,6 @@
-To extend the requirements, inherit from Requirement_Player, Requirement_NPC or Requirement_World (DialogSystem.Requirements namespace) 
+To extend the requirements, inherit from DialogRequirement in DialogSystem.Requirements
 and extend the linked interfaces accordingly (IDialogRelevantPlayer etc.).
 To extend the dialog option actions, inherit from DialogOptionAction (DialogSystem.Actions namespace) and extend the linked interfaces accordingly (IDialogRelevantPlayer etc.).
 By creating new classes this way, use the ReadableName attribute on them to specify a distinct (short) name which will show up in the editor interface.
-Editable variables in them should be public or marked with [SerializeField]
+Editable variables in them should be public or marked with [SerializeField] OR DrawComplexGui overridden to display the fields in the editor (in this case return true from the overriden DrawComplexGui).
 

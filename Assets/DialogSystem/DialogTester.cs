@@ -1,103 +1,105 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using DialogSystem;
+﻿using System;
+using UnityEngine;
 
 namespace DialogSystem
 {
     public class DialogTester : MonoBehaviour
     {
-        public ConversationEngine conversationEngine;
+        Conversation _activeConversation;
+        public ConversationEngine DialogEngine;
 
-        public Language language;
+        public DialogLanguage Language;
 
-        private Conversation c;
+        [SerializeField] TestDialogNpc _npc = new TestDialogNpc();
+
+        [SerializeField] TestDialogPlayer _player = new TestDialogPlayer();
+
+        [SerializeField] TestDialogWorld _world = new TestDialogWorld();
+
         void OnGUI()
         {
-            if (c == null)
+            if (_activeConversation == null)
             {
                 if (GUILayout.Button("Get Dialog"))
                 {
-                    c = conversationEngine.GetAvailableTopics(npc, player, world, language);
+                    _activeConversation = DialogEngine.GetAvailableTopics(_npc, _player, _world, Language);
                 }
             }
             else
             {
-                if (c.Type == Conversation.ConversationType.Single)
+                if (_activeConversation.Type == ConversationType.Single)
                 {
-                    GUILayout.Label(c.Title);
-                    GUILayout.Label(c.Text);
+                    GUILayout.Label(_activeConversation.Title);
+                    GUILayout.Label(_activeConversation.Text);
                 }
-                for (int i = 0; i < c.Answers.Count; i++)
+                for (var i = 0; i < _activeConversation.Answers.Count; i++)
                 {
-                    if (GUILayout.Button(c.Answers[i].Text))
-                    {
-                        c = conversationEngine.Answer(npc, player, world, c, c.Answers[i], language);
-                        break;
-                    }
+                    if (!GUILayout.Button(_activeConversation.Answers[i].Text)) continue;
+                    _activeConversation = DialogEngine.Answer(_npc, _player, _world, _activeConversation, _activeConversation.Answers[i], Language);
+                    break;
                 }
             }
         }
 
-        [SerializeField]
-        private TestDialogNPC npc = new TestDialogNPC();
-        [SerializeField]
-        private TestDialogPlayer player = new TestDialogPlayer();
-        [SerializeField]
-        private TestDialogWorld world = new TestDialogWorld();
-
-        [System.Serializable]
-        public class TestDialogNPC : IDialogRelevantNPC
+        [Serializable]
+        public class TestDialogNpc : IDialogRelevantNpc
         {
-            [SerializeField]
-            private string name = "Npc";
+            [SerializeField] string _name = "Npc";
+            public float FloatValue;
+
+            public int IntValue;
+
+            public string StringValue;
+
             public string Name
             {
-                get { return name; }
-                set { name = value; }
+                get { return _name; }
+                set { _name = value; }
             }
-
-            public int intValue;
-            public string stringValue;
-            public float floatValue;
         }
 
-        [System.Serializable]
+        [Serializable]
         public class TestDialogPlayer : IDialogRelevantPlayer
         {
-            [SerializeField]
-            private string name = "Player";
+            [SerializeField] string _name = "Player";
+            public float FloatValue;
+
+            public int IntValue;
+
+            public string StringValue;
+
             public string Name
             {
-                get { return name; }
-                set { name = value; }
+                get { return _name; }
+                set { _name = value; }
             }
 
-            public int intValue;
-            public int IntValue { get { return intValue; } }
-            public string stringValue;
-            public float floatValue;
-
-            public void OnDialogCompleted(int id)
+            int IDialogRelevantPlayer.GetIntValue()
             {
-                Debug.Log("Dialog completed: "+id);
+                return IntValue;
+            }
+
+            void IDialogRelevantPlayer.OnDialogCompleted(int id)
+            {
+                Debug.Log(Name+": Dialog completed: " + id);
             }
         }
 
-        [System.Serializable]
+        [Serializable]
         public class TestDialogWorld : IDialogRelevantWorld
         {
-            [SerializeField]
-            private string name = "World";
+            [SerializeField] string _name = "World";
+            public float FloatValue;
+
+            public int IntValue;
+
+            public string StringValue;
+
             public string Name
             {
-                get { return name; }
-                set { name = value; }
+                get { return _name; }
+                set { _name = value; }
             }
-
-            public int intValue;
-            public string stringValue;
-            public float floatValue;
         }
-
     }
 }

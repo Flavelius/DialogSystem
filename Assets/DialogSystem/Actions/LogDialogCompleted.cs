@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace DialogSystem.Actions
 {
     [ReadableName("player Log dialog completed")]
     public class LogDialogCompleted: DialogOptionAction
     {
-        public override UnityEngine.Color GetColor()
+        public override Color GetColor()
         {
             return Color.cyan;
         }
 
-        public override void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNPC npc, IDialogRelevantWorld worldInfo)
+        public override void Execute(Dialog activeDialog, IDialogRelevantPlayer player, IDialogRelevantNpc npc, IDialogRelevantWorld worldInfo)
         {
             player.OnDialogCompleted(activeDialog.ID);
         }

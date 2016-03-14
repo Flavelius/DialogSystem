@@ -3,13 +3,13 @@
 namespace DialogSystem.Requirements
 {
     [ReadableName("Player Int Value")]
-    public class RequireIntValue: Requirement_Player
+    public class RequireIntValue: DialogRequirement
     {
-        public int intValue;
+        public int IntValue;
 
-        protected override bool Evaluate(IDialogRelevantPlayer player)
+        public override bool Evaluate(IDialogRelevantPlayer player, IDialogRelevantNpc npc, IDialogRelevantWorld worldInfo)
         {
-            return intValue == player.IntValue;
+            return player != null && IntValue == player.GetIntValue();
         }
 
         public override Color GetColor()

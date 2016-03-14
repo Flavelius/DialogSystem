@@ -1,54 +1,52 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
-using System;
+﻿using System.Collections.Generic;
 using DialogSystem.Actions;
 using DialogSystem.Localization;
+using UnityEngine;
 
 namespace DialogSystem
 {
-    public class DialogOption: ScriptableObject
+    public class DialogOption : ScriptableObject
     {
-        [SerializeField, HideInInspector]
-        public LocalizedString Text = new LocalizedString("");
+        [SerializeField, HideInInspector] List<DialogOptionAction> _actions = new List<DialogOptionAction>();
 
-        [SerializeField, HideInInspector]
-        private string tag = "";
+        [SerializeField, HideInInspector] bool _ignoreRequirements;
+
+        [SerializeField, HideInInspector] bool _isRedirection;
+
+        [SerializeField, HideInInspector] Dialog _nextDialog;
+
+        [SerializeField, HideInInspector] string _tag = "";
+
+        [SerializeField, HideInInspector] public LocalizedString Text = new LocalizedString("");
+
         public string Tag
         {
-            get { return tag??""; }
-            set { tag = value; }
+            get { return _tag ?? ""; }
+            set { _tag = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private Dialog nextDialog;
         public Dialog NextDialog
         {
-            get { return nextDialog; }
-            set { nextDialog = value; }
+            get { return _nextDialog; }
+            set { _nextDialog = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private bool isRedirection = false;
         public bool IsRedirection
         {
-            get { return isRedirection; }
-            set { isRedirection = value; }
+            get { return _isRedirection; }
+            set { _isRedirection = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private bool ignoreRequirements = false;
         public bool IgnoreRequirements
         {
-            get { return ignoreRequirements; }
-            set { ignoreRequirements = value; }
+            get { return _ignoreRequirements; }
+            set { _ignoreRequirements = value; }
         }
 
-        [SerializeField, HideInInspector]
-        private List<DialogOptionAction> actions = new List<DialogOptionAction>();
         public List<DialogOptionAction> Actions
         {
-            get { return actions; }
-            set { actions = value; }
+            get { return _actions; }
+            set { _actions = value; }
         }
     }
 }

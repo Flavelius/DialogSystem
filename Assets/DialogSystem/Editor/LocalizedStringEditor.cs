@@ -1,117 +1,122 @@
-﻿using DialogSystem.Localization;
+﻿using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using DialogSystem;
 
-public class LocalizedStringEditor
+namespace DialogSystem.Localization
 {
-    public LocalizedStringEditor(LocalizedString str, string identifier, bool needsDescription = true)
+    public class LocalizedStringEditor
     {
-        ident = identifier;
-        target = str;
-        this.needsDescription = needsDescription;
-    }
+        readonly string _targetIdentifier;
+        readonly bool _needsDescription;
+        Vector2 _scrollPos;
+        LocalizedString _target;
 
-    public void EndEdit()
-    {
-        target = null;
-    }
-
-    string ident = "";
-    bool needsDescription;
-    LocalizedString target;
-    private Vector2 scrollPos;
-    public bool DrawGUI()
-    {
-        bool ret = true;
-        if (target == null) { return false; }
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        GUILayout.BeginVertical(EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).GetStyle("GroupBox"));
-        GUILayout.Space(5);
-        GUILayout.Label("Editing: " + ident, EditorStyles.helpBox);
-        if (needsDescription)
+        public LocalizedStringEditor(LocalizedString str, string identifier, bool needsDescription = true)
         {
-            GUILayout.Label("Description:", EditorStyles.helpBox);
-            target.Description = EditorGUILayout.TextField(target.Description);
+            _targetIdentifier = identifier;
+            _target = str;
+            _needsDescription = needsDescription;
         }
-        GUILayout.Label("Localized strings:", EditorStyles.helpBox);
-        if (GUILayout.Button("Add"))
+
+        public void EndEdit()
         {
-            int currentLangIndex = 0;
-            int maxIndex = System.Enum.GetNames(typeof(Language)).Length;
-            while (currentLangIndex < maxIndex)
+            _target = null;
+        }
+
+        public bool DrawGui()
+        {
+            var ret = true;
+            if (_target == null)
             {
-                if (!LanguageEntryExists(target.Strings, (Language)currentLangIndex))
+                return false;
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginVertical(EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).GetStyle("GroupBox"));
+            GUILayout.Space(5);
+            GUILayout.Label("Editing: " + _targetIdentifier, EditorStyles.helpBox);
+            if (_needsDescription)
+            {
+                GUILayout.Label("Description:", EditorStyles.helpBox);
+                _target.Description = EditorGUILayout.TextField(_target.Description);
+            }
+            GUILayout.Label("Localized strings:", EditorStyles.helpBox);
+            if (GUILayout.Button("Add"))
+            {
+                var currentLangIndex = 0;
+                var maxIndex = Enum.GetNames(typeof (DialogLanguage)).Length;
+                while (currentLangIndex < maxIndex)
                 {
+                    if (!LanguageEntryExists(_target.Strings, (DialogLanguage) currentLangIndex))
+                    {
+                        break;
+                    }
+                    currentLangIndex++;
+                }
+                if (currentLangIndex < maxIndex)
+                {
+                    _target.Strings.Add(new LocalizedString.LanguageString((DialogLanguage) currentLangIndex, ""));
+                }
+            }
+            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.MinHeight(150));
+            var removeIndex = -1;
+            for (var i = 0; i < _target.Strings.Count; i++)
+            {
+                GUILayout.BeginVertical(EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).GetStyle("GroupBox"));
+                GUILayout.BeginHorizontal();
+                var l = (DialogLanguage) EditorGUILayout.EnumPopup(_target.Strings[i].language);
+                if (l != _target.Strings[i].language)
+                {
+                    if (!LanguageEntryExists(_target.Strings, l))
+                    {
+                        var ls = _target.Strings[i];
+                        ls.language = l;
+                        _target.Strings[i] = ls;
+                    }
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Remove"))
+                {
+                    removeIndex = i;
+                }
+                GUILayout.EndHorizontal();
+                var els = _target.Strings[i];
+                els.Text = GUILayout.TextArea(els.Text, GUILayout.MinWidth(200), GUILayout.MinHeight(80));
+                _target.Strings[i] = els;
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                GUILayout.EndVertical();
+                if (removeIndex >= 0)
+                {
+                    _target.Strings.RemoveAt(removeIndex);
                     break;
                 }
-                currentLangIndex++;
             }
-            if (currentLangIndex < maxIndex)
+            GUILayout.EndScrollView();
+            if (GUILayout.Button("Close"))
             {
-                target.Strings.Add(new LocalizedString.LanguageString((Language)currentLangIndex, ""));
+                ret = false;
             }
+
+            GUILayout.EndVertical();
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            return ret;
         }
-        scrollPos = GUILayout.BeginScrollView(scrollPos, GUILayout.MinHeight(150));
-        int removeIndex = -1;
-        for (int i = 0; i < target.Strings.Count; i++)
+
+        bool LanguageEntryExists(List<LocalizedString.LanguageString> ls, DialogLanguage l)
         {
-            GUILayout.BeginVertical(EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).GetStyle("GroupBox"));
-            GUILayout.BeginHorizontal();
-            Language l = (Language)EditorGUILayout.EnumPopup(target.Strings[i].language);
-            if (l != target.Strings[i].language)
+            for (var i = 0; i < ls.Count; i++)
             {
-                if (!LanguageEntryExists(target.Strings, l))
+                if (ls[i].language == l)
                 {
-                    LocalizedString.LanguageString ls = target.Strings[i];
-                    ls.language = l;
-                    target.Strings[i] = ls;
+                    return true;
                 }
             }
-            GUILayout.FlexibleSpace();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Remove"))
-            {
-                removeIndex = i;
-            }
-            GUILayout.EndHorizontal();
-            LocalizedString.LanguageString els = target.Strings[i];
-            els.Text = GUILayout.TextArea(els.Text, GUILayout.MinWidth(200), GUILayout.MinHeight(80));
-            target.Strings[i] = els;
-            GUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
-            if (removeIndex >= 0)
-            {
-                target.Strings.RemoveAt(removeIndex);
-                break;
-            }
+            return false;
         }
-        GUILayout.EndScrollView();
-        if (GUILayout.Button("Close"))
-        {
-            ret = false;
-        }
-
-        GUILayout.EndVertical();
-        GUILayout.FlexibleSpace();
-        GUILayout.EndHorizontal();
-        return ret;
     }
-
-    private bool LanguageEntryExists(List<LocalizedString.LanguageString> ls, Language l)
-    {
-        for (int i = 0; i < ls.Count; i++)
-        {
-            if (ls[i].language == l)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
 }

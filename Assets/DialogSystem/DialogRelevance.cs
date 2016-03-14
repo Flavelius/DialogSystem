@@ -2,11 +2,11 @@
 {
     public interface IDialogRelevantPlayer
     {
-        int IntValue { get; }
+        int GetIntValue();
         void OnDialogCompleted(int id);
     }
 
-    public interface IDialogRelevantNPC
+    public interface IDialogRelevantNpc
     {
 
     }

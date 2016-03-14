@@ -1,1035 +1,1094 @@
-﻿using DialogSystem;
-using DialogSystem.Requirements.Internal;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using DialogSystem.Actions;
+using DialogSystem.Localization;
+using DialogSystem.Requirements;
 using UnityEditor;
 using UnityEngine;
-using DialogSystem.Actions;
-using DialogSystem.Internal;
 
-public class DialogEditor : EditorWindow
+namespace DialogSystem
 {
-    public DialogCollection sourceCollection;
-    public DialogIDTracker idTracker;
-    List<Type> usableRequirementTypes = new List<Type>();
-    List<string> usableRequirementNames = new List<string>();
-
-    List<Type> usableActionTypes = new List<Type>();
-    List<string> usableActionNames = new List<string>();
-
-    private GUIStyle headerStyle;
-    private Color inspectorColor;
-    private GUIStyle buttonStyle;
-    private GUIStyle lblStyle;
-
-    private const string txtNotSetMsg = "Text not set";
-
-    private int GetUniqueID(Dialog d)
+    public class DialogEditor : EditorWindow
     {
-        return idTracker.GetNewID(sourceCollection);
-    }
+        const string TxtNotSetMsg = "Text not set";
+        const float IndentWidth = 50;
+        const float LeftColumnWidth = 200;
+        const float NodeHeight = 30;
+        const float NodeWidth = 180;
+        const float RightColumnoverlayWidth = 200;
+        readonly Color _nodeColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+        readonly List<string> _usableActionNames = new List<string>();
 
-    private void CollectUsableRequirementTypes()
-    {
-        usableRequirementTypes.Clear();
-        usableRequirementNames.Clear();
-        List<Type> types = new List<Type>
-            (
-            Assembly.GetAssembly(typeof(BaseRequirement)).GetTypes().Where(i => i.IsSubclassOf(typeof(BaseRequirement)) && i.IsPublic && i.IsClass && !i.IsAbstract)
-            );
-        usableRequirementTypes.Add(null);
-        usableRequirementNames.Add("Add");
-        foreach (Type t in types)
+        readonly List<Type> _usableActionTypes = new List<Type>();
+        readonly List<string> _usableRequirementNames = new List<string>();
+        readonly List<Type> _usableRequirementTypes = new List<Type>();
+
+        Dialog _activeDialog;
+        DialogOption _activeOptionNode;
+
+        LocalizedStringEditor _activeStringEditor;
+        Dialog _activeSubDialog;
+        GUIStyle _buttonStyle;
+        float _countedHeight;
+
+        float _countedWidth;
+        Vector2 _dialogsScroll = Vector2.zero;
+
+        GUIStyle _headerStyle;
+        Color _inspectorColor;
+        GUIStyle _lblStyle;
+
+        Vector2 _mainViewScrollPos;
+        float _previousState;
+
+        Vector2 _scrollbar;
+        Vector2 _scrollbar2;
+        public DialogCollection SourceCollection;
+
+        int GetUniqueId()
         {
-            usableRequirementTypes.Add(t);
-            ReadableNameAttribute[] rns = t.GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
-            if (rns.Length > 0)
+            return SourceCollection.GetUniqueId();
+        }
+
+        void CollectUsableRequirementTypes()
+        {
+            _usableRequirementTypes.Clear();
+            _usableRequirementNames.Clear();
+            var types = new List<Type>
+                (
+                Assembly.GetAssembly(typeof (DialogRequirement)).GetTypes().Where(i => i.IsSubclassOf(typeof (DialogRequirement)) && i.IsPublic && i.IsClass && !i.IsAbstract)
+                );
+            _usableRequirementTypes.Add(null);
+            _usableRequirementNames.Add("Add");
+            foreach (var t in types)
             {
-                usableRequirementNames.Add(rns[0].Name);
+                _usableRequirementTypes.Add(t);
+                var rns = t.GetCustomAttributes(typeof (ReadableNameAttribute), false) as ReadableNameAttribute[];
+                if (rns == null) continue;
+                if (rns.Length == 0)
+                {
+                    _usableRequirementNames.Add(t.Name);
+                }
+                else
+                {
+                    _usableRequirementNames.Add(rns[0].Name);
+                }
+            }
+        }
+
+        void CollectUsableActionTypes()
+        {
+            _usableActionTypes.Clear();
+            _usableActionNames.Clear();
+            var types = new List<Type>
+                (
+                Assembly.GetAssembly(typeof (DialogOptionAction))
+                    .GetTypes()
+                    .Where(i => i.IsSubclassOf(typeof (DialogOptionAction)) && i.IsPublic && i.IsClass && !i.IsAbstract)
+                );
+            _usableActionTypes.Add(null);
+            _usableActionNames.Add("Add");
+            foreach (var t in types)
+            {
+                _usableActionTypes.Add(t);
+                var rns = t.GetCustomAttributes(typeof (ReadableNameAttribute), false) as ReadableNameAttribute[];
+                if (rns == null) continue;
+                if (rns.Length > 0)
+                {
+                    _usableActionNames.Add(rns[0].Name);
+                }
+                else
+                {
+                    _usableActionNames.Add(t.Name);
+                }
+            }
+        }
+
+        public void Cleanup()
+        {
+            if (SourceCollection != null)
+            {
+                EditorUtility.SetDirty(SourceCollection);
+                AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(SourceCollection));
+            }
+            if (_activeStringEditor != null)
+            {
+                _activeStringEditor.EndEdit();
+                _activeStringEditor = null;
+            }
+        }
+
+        public void Initialize()
+        {
+            if (_headerStyle == null)
+            {
+                _headerStyle = new GUIStyle(GUI.skin.GetStyle("TL SelectionBarPreview"))
+                {
+                    stretchWidth = true,
+                    fontStyle = FontStyle.Bold,
+                    fontSize = 14,
+                    normal = {textColor = new Color(0.7f, 0.6f, 0.6f)}
+                };
+            }
+            _lblStyle = new GUIStyle(GUI.skin.GetStyle("MeTransitionHead")) {stretchWidth = true};
+            _inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
+            _buttonStyle = GUI.skin.GetStyle("PreButton");
+            CollectUsableRequirementTypes();
+            CollectUsableActionTypes();
+        }
+
+        void OnEnable()
+        {
+            CollectUsableActionTypes();
+            CollectUsableRequirementTypes();
+        }
+
+        void InspectOptionNode(DialogOption o)
+        {
+            _activeSubDialog = null;
+            _activeOptionNode = o;
+        }
+
+        void InspectDialogNode(Dialog d)
+        {
+            _activeOptionNode = null;
+            _activeSubDialog = d;
+        }
+
+        void CloseSubInspector()
+        {
+            _activeSubDialog = null;
+            _activeOptionNode = null;
+            _activeStringEditor = null;
+        }
+
+        void OnGUI()
+        {
+            if (SourceCollection == null)
+            {
+                return;
+            }
+            if (_activeStringEditor != null)
+            {
+                GUI.enabled = false;
             }
             else
             {
-                usableRequirementNames.Add(t.Name);
+                GUI.enabled = _activeOptionNode == null && _activeSubDialog == null;
             }
-        }
-    }
-
-    private void CollectUsableActionTypes()
-    {
-        usableActionTypes.Clear();
-        usableActionNames.Clear();
-        List<Type> types = new List<Type>
-            (
-            Assembly.GetAssembly(typeof(DialogOptionAction)).GetTypes().Where(i => i.IsSubclassOf(typeof(DialogOptionAction)) && i.IsPublic && i.IsClass && !i.IsAbstract)
-            );
-        usableActionTypes.Add(null);
-        usableActionNames.Add("Add");
-        foreach (Type t in types)
-        {
-            usableActionTypes.Add(t);
-            ReadableNameAttribute[] rns = t.GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
-            if (rns.Length > 0)
+            var left = new Rect(0, 0, LeftColumnWidth, position.height);
+            var prev = GUI.color;
+            GUI.color = _inspectorColor;
+            GUI.BeginGroup(left, EditorStyles.textField);
+            GUI.color = prev;
+            DisplayDialogTools(left);
+            GUI.EndGroup();
+            DisplayDialogEditor(new Rect(LeftColumnWidth, 0, position.width - LeftColumnWidth, position.height));
+            if (_activeOptionNode != null)
             {
-                usableActionNames.Add(rns[0].Name);
+                GUI.enabled = true & _activeStringEditor == null;
+                DisplayOptionNodeInspector(new Rect(position.width - RightColumnoverlayWidth, 0, RightColumnoverlayWidth, position.height), _activeOptionNode);
             }
-            else
+            else if (_activeSubDialog != null)
             {
-                usableActionNames.Add(t.Name);
+                GUI.enabled = true & _activeStringEditor == null;
+                DisplayDialogNodeInspector(new Rect(position.width - RightColumnoverlayWidth, 0, RightColumnoverlayWidth, position.height), _activeSubDialog);
             }
-        }
-    }
-
-    public void Cleanup()
-    {
-        if (sourceCollection != null)
-        {
-            EditorUtility.SetDirty(sourceCollection);
-            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(sourceCollection));
-        }
-        if (activeStringEditor != null) 
-        {
-            activeStringEditor.EndEdit();
-            activeStringEditor = null;
-        }
-    }
-
-    public void Initialize()
-    {
-        if (headerStyle == null)
-        {
-            headerStyle = new GUIStyle(GUI.skin.GetStyle("TL SelectionBarPreview"));
-            headerStyle.stretchWidth = true;
-            headerStyle.fontStyle = FontStyle.Bold;
-            headerStyle.fontSize = 14;
-            headerStyle.normal.textColor = new Color(0.7f, 0.6f, 0.6f);
-        }
-        lblStyle = new GUIStyle(GUI.skin.GetStyle("MeTransitionHead"));
-        lblStyle.stretchWidth = true;
-        inspectorColor = Color.Lerp(Color.gray, Color.white, 0.5f);
-        buttonStyle = GUI.skin.GetStyle("PreButton");
-        CollectUsableRequirementTypes();
-        CollectUsableActionTypes();
-        LoadIDTracker();
-    }
-
-    private void LoadIDTracker()
-    {
-        object trackerObject = AssetDatabase.LoadAssetAtPath("Assets/DialogSystem/Internal/DialogIDTracker.asset", typeof(DialogIDTracker));
-        idTracker = trackerObject as DialogIDTracker;
-        if (idTracker != null) { return; }
-        string[] idtrackerGUIDs = AssetDatabase.FindAssets("t:DialogIDTracker");
-        foreach (string s in idtrackerGUIDs)
-        {
-            string path = AssetDatabase.GUIDToAssetPath(s);
-            object o = AssetDatabase.LoadAssetAtPath(path, typeof(DialogIDTracker));
-            if (o == null) { continue; }
-            DialogIDTracker dit = o as DialogIDTracker;
-            if (dit != null)
+            if (_activeStringEditor != null)
             {
-                idTracker = dit;
-                break;
+                GUI.enabled = true;
+                if (_activeStringEditor.DrawGui()) return;
+                _activeStringEditor.EndEdit();
+                _activeStringEditor = null;
             }
         }
-        if (idTracker == null)
-        {
-            Debug.LogError("IDTracker could not be loaded, it must exist");
-            Close();
-        }
-    }
 
-    void OnEnable()
-    {
-        CollectUsableActionTypes();
-        CollectUsableRequirementTypes();
-    }
-
-    private Dialog activeDialog;
-    private DialogOption activeOptionNode;
-    private Dialog activeSubDialog;
-    private void InspectOptionNode(DialogOption o)
-    {
-        activeSubDialog = null;
-        activeOptionNode = o;
-    }
-    private void InspectDialogNode(Dialog d)
-    {
-        activeOptionNode = null;
-        activeSubDialog = d;
-    }
-    private void CloseSubInspector()
-    {
-        activeSubDialog = null;
-        activeOptionNode = null;
-        activeStringEditor = null;
-    }
-    private float leftColumnWidth = 200;
-    private float rightColumnoverlayWidth = 200;
-    private Color nodeColor = new Color(0.75f,0.75f,0.75f,1f);
-    Vector2 dialogsScroll = Vector2.zero;
-
-    private LocalizedStringEditor activeStringEditor;
-
-    void OnGUI()
-    {
-        if (sourceCollection == null) { return; }
-        if (activeStringEditor != null) { GUI.enabled = false; }
-        else { GUI.enabled = (activeOptionNode == null && activeSubDialog == null); }
-        Rect Left = new Rect(0, 0, leftColumnWidth, position.height);
-        Color prev = GUI.color;
-        GUI.color = inspectorColor;
-        GUI.BeginGroup(Left, EditorStyles.textField);
-        GUI.color = prev;
-        DisplayDialogTools(Left);
-        GUI.EndGroup();
-        DisplayDialogEditor(new Rect(leftColumnWidth, 0, position.width-leftColumnWidth, position.height));
-        if (activeOptionNode != null)
+        void Update()
         {
-            GUI.enabled = true & activeStringEditor == null;
-            DisplayOptionNodeInspector(new Rect(position.width - rightColumnoverlayWidth, 0, rightColumnoverlayWidth, position.height), activeOptionNode);
-        }
-        else if (activeSubDialog != null)
-        {
-            GUI.enabled = true & activeStringEditor == null;
-            DisplayDialogNodeInspector(new Rect(position.width - rightColumnoverlayWidth, 0, rightColumnoverlayWidth, position.height), activeSubDialog);
-        }
-        if (activeStringEditor != null)
-        {
-            GUI.enabled = true;
-            if (activeStringEditor.DrawGUI() == false)
+            if (SourceCollection == null)
             {
-                activeStringEditor.EndEdit();
-                activeStringEditor = null;
+                Cleanup();
+                Close();
             }
         }
-    } 
 
-    void Update()
-    {
-        if (sourceCollection == null)
+        void OnDestroy()
         {
             Cleanup();
-            Close();
-            return;
         }
-    }
 
-    void OnDestroy()
-    {
-        Cleanup();
-    }
-
-    bool isValidName(string name)
-    {
-        return !string.IsNullOrEmpty(name) && !name.StartsWith(" ");
-    }
-
-    public static void OpenEdit(DialogCollection collection)
-    {
-        DialogEditor window = EditorWindow.GetWindow<DialogEditor>("Dialog Editor");
-        window.Close();
-        window = EditorWindow.GetWindow<DialogEditor>("Dialog Editor");
-        window.minSize = new Vector2(600, 400);
-        window.Load(collection);
-    }
-
-    public void Load(DialogCollection collection)
-    {
-        Initialize();
-        sourceCollection = collection;
-    }
-
-    private void DeleteCollectionDialog(Dialog d)
-    {
-        if (sourceCollection.dialogs.Remove(d))
+        public static void OpenEdit(DialogCollection collection)
         {
-            DeleteDialog(d);
+            var window = GetWindow<DialogEditor>("Dialog Editor");
+            window.Close();
+            window = GetWindow<DialogEditor>("Dialog Editor");
+            window.minSize = new Vector2(600, 400);
+            window.Load(collection);
         }
-    }
 
-    private void DeleteDialog(Dialog d)
-    {
-        DestroyImmediate(d, true);
-        DirtyAsset();
-    }
-
-    private void DirtyAsset()
-    {
-        EditorUtility.SetDirty(sourceCollection);
-    }
-
-    private void AddToAsset(ScriptableObject so)
-    {
-        so.hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
-        AssetDatabase.AddObjectToAsset(so, sourceCollection);
-        DirtyAsset();
-    }
-
-    private void DeleteCleanupDialog(Dialog toDelete)
-    {
-        DeleteRecurseDialog(toDelete, activeDialog, false);
-        CleanupUnreferencedAssets();
-    }
-
-    private void DeleteRecurseDialog(Dialog toDelete, Dialog currentItemToCheck, bool releaseIfNotLoop)
-    {
-        if (currentItemToCheck == null) { return; }
-        for (int i = currentItemToCheck.Options.Count; i-- > 0; )
+        public void Load(DialogCollection collection)
         {
-            if (currentItemToCheck.Options[i].NextDialog == null) { continue; }
+            Initialize();
+            SourceCollection = collection;
+        }
 
-            if (currentItemToCheck.Options[i].NextDialog == toDelete | releaseIfNotLoop)
+        void DeleteCollectionDialog(Dialog d)
+        {
+            if (SourceCollection.Dialogs.Remove(d))
             {
-                if (!currentItemToCheck.Options[i].IsRedirection)
+                DeleteDialog(d);
+            }
+        }
+
+        void DeleteDialog(Dialog d)
+        {
+            DestroyImmediate(d, true);
+            DirtyAsset();
+        }
+
+        void DirtyAsset()
+        {
+            EditorUtility.SetDirty(SourceCollection);
+        }
+
+        void AddToAsset(ScriptableObject so)
+        {
+            so.hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
+            AssetDatabase.AddObjectToAsset(so, SourceCollection);
+            DirtyAsset();
+        }
+
+        void DeleteCleanupDialog(Dialog toDelete)
+        {
+            DeleteRecurseDialog(toDelete, _activeDialog, false);
+            CleanupUnreferencedAssets();
+        }
+
+        void DeleteRecurseDialog(Dialog toDelete, Dialog currentItemToCheck, bool releaseIfNotLoop)
+        {
+            if (currentItemToCheck == null)
+            {
+                return;
+            }
+            for (var i = currentItemToCheck.Options.Count; i-- > 0;)
+            {
+                if (currentItemToCheck.Options[i].NextDialog == null)
                 {
-                    DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, true);
-                    //clean
-                    for (int r = currentItemToCheck.Options[i].NextDialog.Requirements.Count; r-- > 0; )
+                    continue;
+                }
+
+                if (currentItemToCheck.Options[i].NextDialog == toDelete | releaseIfNotLoop)
+                {
+                    if (!currentItemToCheck.Options[i].IsRedirection)
                     {
-                        DestroyImmediate(currentItemToCheck.Options[i].NextDialog.Requirements[r], true);
+                        DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, true);
+                        //clean
+                        for (var r = currentItemToCheck.Options[i].NextDialog.Requirements.Count; r-- > 0;)
+                        {
+                            DestroyImmediate(currentItemToCheck.Options[i].NextDialog.Requirements[r], true);
+                        }
+                        DeleteDialog(currentItemToCheck.Options[i].NextDialog);
+                        //
                     }
-                    DeleteDialog(currentItemToCheck.Options[i].NextDialog);
-                    //
+                    currentItemToCheck.Options[i].NextDialog = null;
                 }
-                currentItemToCheck.Options[i].NextDialog = null;
-            }
-            else
-            {
-                DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, false);
+                else
+                {
+                    DeleteRecurseDialog(toDelete, currentItemToCheck.Options[i].NextDialog, false);
+                }
             }
         }
-    }
 
-    private void CleanupUnreferencedAssets()
-    {
-        string path = AssetDatabase.GetAssetPath(sourceCollection);
-        object[] objs = AssetDatabase.LoadAllAssetsAtPath(path);
-        foreach (object o in objs)
+        void CleanupUnreferencedAssets()
         {
-            Dialog d = o as Dialog;
-            if (d != null)
+            var path = AssetDatabase.GetAssetPath(SourceCollection);
+            var objs = AssetDatabase.LoadAllAssetsAtPath(path);
+            foreach (var o in objs)
             {
-                if (!IsReferencedInChains(d))
+                var d = o as Dialog;
+                if (d != null)
                 {
-                    Debug.Log("Unreferenced Dialog: " + d.ID);
-                }
-            }
-            else
-            {
-                DialogOptionAction tr = o as DialogOptionAction;
-                if (tr != null)
-                {
-                    if (!IsReferencedInChains(tr))
+                    if (!IsReferencedInChains(d))
                     {
-                        Debug.Log("Unreferenced trigger: " + tr.CachedName);
+                        Debug.Log("Removing unreferenced dialog: " + d.ID);
+                        DestroyImmediate(d, true);
                     }
                 }
                 else
                 {
-                    BaseRequirement br = o as BaseRequirement;
-                    if (br != null)
+                    var tr = o as DialogOptionAction;
+                    if (tr != null)
                     {
-                        if (!IsReferencedInChains(br))
+                        if (!IsReferencedInChains(tr))
                         {
-                            Debug.Log("Unreferenced Requirement: " + br.CachedName);
+                            Debug.Log("Removing unreferenced dialog action: " + tr.CachedName);
+                            DestroyImmediate(tr, true);
+                        }
+                    }
+                    else
+                    {
+                        var br = o as DialogRequirement;
+                        if (br != null)
+                        {
+                            if (!IsReferencedInChains(br))
+                            {
+                                Debug.Log("Removing unreferenced dialog requirement: " + br.CachedName);
+                                DestroyImmediate(br, true);
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    private bool IsReferencedInChains(Dialog d)
-    {
-        foreach (Dialog dl in sourceCollection.dialogs)
+        bool IsReferencedInChains(Dialog d)
         {
-            List<Dialog> chain = new List<Dialog>();
-            chain = GetAllDialogsInChain(chain, dl);
-            foreach (Dialog chainDialog in chain)
+            foreach (var dl in SourceCollection.Dialogs)
             {
-                if (chainDialog == d)
+                var chain = new List<Dialog>();
+                chain = GetAllDialogsInChain(chain, dl);
+                foreach (var chainDialog in chain)
                 {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private bool IsReferencedInChains(DialogOptionAction tr)
-    {
-        foreach (Dialog dl in sourceCollection.dialogs)
-        {
-            List<Dialog> chain = new List<Dialog>();
-            chain = GetAllDialogsInChain(chain, dl);
-            foreach (Dialog chainDialog in chain)
-            {
-                foreach (DialogOption dop in chainDialog.Options)
-                {
-                    if (dop.Actions.Contains(tr))
+                    if (chainDialog == d)
                     {
                         return true;
                     }
                 }
             }
+            return false;
         }
-        return false;
-    }
 
-    private bool IsReferencedInChains(BaseRequirement br)
-    {
-        foreach (Dialog dl in sourceCollection.dialogs)
+        bool IsReferencedInChains(DialogOptionAction tr)
         {
-            List<Dialog> chain = new List<Dialog>();
-            chain = GetAllDialogsInChain(chain, dl);
-            foreach (Dialog chainDialog in chain)
+            foreach (var dl in SourceCollection.Dialogs)
             {
-                if (chainDialog.Requirements.Contains(br))
+                var chain = new List<Dialog>();
+                chain = GetAllDialogsInChain(chain, dl);
+                foreach (var chainDialog in chain)
                 {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    void DisplayDialogTools(Rect r)
-    {
-        GUILayout.Space(5);
-        GUILayout.BeginVertical(EditorStyles.textArea,GUILayout.Width(r.width-8));
-        if (GUILayout.Button("New Dialog"))
-        {
-            Dialog d = ScriptableObject.CreateInstance<Dialog>();
-            d.ID = GetUniqueID(d);
-            AddToAsset(d);
-            sourceCollection.dialogs.Add(d);
-            activeDialog = d;
-        }
-        GUILayout.EndVertical();
-        Rect itemRect = new Rect(0, 0, r.width - 38, 17);
-        Rect deleteItemRect = new Rect(itemRect.width, 0, 18, 17);
-        Rect scrollContainerRect = new Rect(2, 30, r.width - 5, r.height - 32);
-        Rect contentScrollRect = new Rect(0, 0, r.width - 20, Mathf.Max(sourceCollection.dialogs.Count * itemRect.height, scrollContainerRect.height));
-        dialogsScroll = GUI.BeginScrollView(scrollContainerRect, dialogsScroll, contentScrollRect, false, true);
-        for (int i = 0; i < sourceCollection.dialogs.Count; i++)
-        {
-            itemRect.y = i * (itemRect.height+2);
-            deleteItemRect.y = itemRect.y;
-            if (itemRect.y < dialogsScroll.y - itemRect.height)
-            {
-                continue;
-            }
-            if (itemRect.y > dialogsScroll.y + scrollContainerRect.height)
-            {
-                break;
-            }
-            if (sourceCollection.dialogs[i] == activeDialog)
-            {
-                GUI.color = Color.gray;
-            }
-            string dTitle = sourceCollection.dialogs[i].Title.Description;
-            if (dTitle == null || dTitle.Length == 0)
-            {
-                dTitle = txtNotSetMsg;
-            }
-            if (GUI.Button(itemRect, dTitle, "ButtonLeft"))
-            {
-                if (activeDialog == sourceCollection.dialogs[i]) { activeDialog = null; }
-                else
-                {
-                    activeDialog = sourceCollection.dialogs[i];
-                }
-            }
-            GUI.color = Color.white;
-            if (GUI.Button(deleteItemRect, "x", "ButtonRight"))
-            {
-                DeleteCleanupDialog(sourceCollection.dialogs[i]);
-                if (sourceCollection.dialogs[i] == activeDialog) { CloseSubInspector(); activeDialog = null; }
-                DeleteCollectionDialog(sourceCollection.dialogs[i]);
-            }
-        }
-        GUI.EndScrollView();
-    }
-
-    Vector2 mainViewScrollPos;
-    float nodeWidth = 180;
-    float nodeHeight = 30;
-    float indentWidth = 50;
-    void DisplayDialogEditor(Rect r)
-    {
-        if (activeDialog == null) { return; }
-        GUI.color = nodeColor;
-        GUILayout.BeginArea(new Rect(r.x, r.y, r.width, r.height));
-        if (countedHeight < r.height) { countedHeight = r.height-15; }
-        if (countedWidth < r.width) { countedWidth = r.width-15; }
-        float inspectorInset = 0;
-        if (activeOptionNode != null || activeSubDialog != null)
-        {
-            inspectorInset = rightColumnoverlayWidth;
-            if (countedWidth > r.width)
-            {
-                mainViewScrollPos = new Vector2(mainViewScrollPos.x + inspectorInset, mainViewScrollPos.y);
-            }
-        }
-        mainViewScrollPos = GUI.BeginScrollView(new Rect(0, 0, r.width-inspectorInset, r.height), mainViewScrollPos, new Rect(0, 0, countedWidth, countedHeight));
-        if (previousState != countedWidth + countedHeight)
-        {
-            Repaint();
-            previousState = countedWidth + countedHeight;
-        }
-        countedHeight = 0;
-        countedWidth = 0;
-        RecurseDialogs(new Rect(5, r.y+5,nodeWidth, nodeHeight) , 0, 0, activeDialog);
-        GUI.EndScrollView();
-        GUILayout.EndArea();
-        GUI.color = Color.white;
-    }
-
-    float countedWidth;
-    float countedHeight;
-    float previousState;
-    int RecurseDialogs(Rect parent, int length, int depth, Dialog d)
-    {
-        Rect r = new Rect(parent.x + (depth * nodeWidth), parent.y + (length * nodeHeight), nodeWidth, nodeHeight);
-        DisplaySingleDialogNode(r, d, length, depth);
-        int branchDepth = 1;
-        int lastOptionDepth = 0;
-        for (int i = 0; i < d.Options.Count;i++ )
-        {
-            lastOptionDepth = branchDepth;
-            int move = DisplayDialogOption(new Rect(r.x + nodeWidth + indentWidth, r.y + nodeHeight * lastOptionDepth, nodeWidth + indentWidth, nodeHeight), d.Options[i]);
-            if (d.Options[i].NextDialog != null)
-            {
-                if (d.Options[i].IsRedirection)
-                { 
-                    DisplayDialogLoop(new Rect(r.x + nodeWidth + indentWidth * 2, r.y + nodeHeight * lastOptionDepth, nodeWidth + indentWidth, nodeHeight), d.Options[i]);
-                    branchDepth += 1;
-                }
-                else
-                {
-                    branchDepth += RecurseDialogs(new Rect(parent.x + indentWidth * 2, parent.y, nodeWidth, nodeHeight), length + branchDepth, depth + 1, d.Options[i].NextDialog);
-                }
-            }
-            else
-            {
-                branchDepth += 1;
-                if (d.Options[i].Actions.Count > 0)
-                {
-                    branchDepth += 1;
-                }
-            }
-            if (move != 0)
-            {
-                if (move == -10)
-                {
-                    if (d.Options.Count > 0)
+                    foreach (var dop in chainDialog.Options)
                     {
-                        DialogOption dI = d.Options[i];
-                        if (dI.NextDialog != null && !dI.IsRedirection)
+                        if (dop.Actions.Contains(tr))
                         {
-                            DeleteCleanupDialog(dI.NextDialog);
+                            return true;
                         }
-                        for (int t = dI.Actions.Count; t-- > 0; )
-                        {
-                            DestroyImmediate(dI.Actions[t], true);
-                        }
-                        d.Options.Remove(dI);
-                        DestroyImmediate(dI, true);
                     }
                 }
-                else if (i + move >= 0 & i + move < d.Options.Count)
+            }
+            return false;
+        }
+
+        bool IsReferencedInChains(DialogRequirement br)
+        {
+            foreach (var dl in SourceCollection.Dialogs)
+            {
+                var chain = new List<Dialog>();
+                chain = GetAllDialogsInChain(chain, dl);
+                foreach (var chainDialog in chain)
                 {
-                    DialogOption dO = d.Options[i];
-                    d.Options[i] = d.Options[i + move];
-                    d.Options[i + move] = dO;
+                    if (chainDialog.Requirements.Contains(br))
+                    {
+                        return true;
+                    }
                 }
             }
+            return false;
         }
-        if (DrawOptionRegion(new Rect(r.x + nodeWidth + indentWidth, r.y + nodeHeight, nodeWidth + indentWidth, nodeHeight), lastOptionDepth))
-        {
-            DialogOption dO = ScriptableObject.CreateInstance<DialogOption>();
-            AddToAsset(dO);
-            d.Options.Add(dO);
-        }
-        branchDepth++;
-        return branchDepth;
-    }
 
-    int DisplayDialogOption(Rect r, DialogOption option)
-    {
-        Color prev = GUI.color;
-        GUI.color = nodeColor;
-        GUIStyle gs = new GUIStyle(GUI.skin.button);
-        gs.alignment = TextAnchor.MiddleLeft;
-        gs.fontSize = 8;
-        gs.border = new RectOffset(2, 2, 2, 2);
-        Rect title = new Rect(r.x - r.width + indentWidth+1, r.y + r.height * 0.6f, r.width, r.height * 0.4f);
-        if (title.y + title.height > countedHeight) { countedHeight = title.y + title.height; }
-        if (title.x + title.width > countedWidth) { countedWidth = title.x + title.width; }
-        int ret = 0;
-        string tTitle = option.Text.Description;
-        if (tTitle == null || tTitle.Length == 0)
+        void DisplayDialogTools(Rect r)
         {
-            tTitle = txtNotSetMsg;
-        }
-        if (GUI.Button(title, tTitle, gs))
-        {
-            InspectOptionNode(option);
-        }
-        gs.alignment = TextAnchor.MiddleCenter;
-        if (GUI.Button(new Rect(title.x - 18, title.y - 5, 17, 17), "˄", gs))
-        {
-            ret = -1;
-        }
-        if (GUI.Button(new Rect(title.x - 34, title.y - 5, 17, 17), "˅", gs))
-        {
-            ret = 1;
-        }
-        if (GUI.Button(new Rect(title.x - 50, title.y - 5, 17, 17), "x", gs))
-        {
-            ret = -10;
-        }
-        DrawInlineDialogOptionActions(new Rect(title.x + indentWidth, title.y + title.height, title.width, title.height + 10), option);
-        if (option.NextDialog != null)
-        {
-            if (!option.IgnoreRequirements)
+            GUILayout.Space(5);
+            GUILayout.BeginVertical(EditorStyles.textArea, GUILayout.Width(r.width - 8));
+            if (GUILayout.Button("New Dialog"))
             {
-                DrawInlineDialogRequirements(new Rect(title.x + indentWidth, title.y - (title.height + 2), title.width, title.height + 10), option);
+                var d = CreateInstance<Dialog>();
+                d.ID = GetUniqueId();
+                AddToAsset(d);
+                SourceCollection.Dialogs.Add(d);
+                _activeDialog = d;
             }
-            if (GUI.Button(new Rect(title.x + title.width - 17, r.y+5, 17, 13), "x", gs))
+            GUILayout.EndVertical();
+            var itemRect = new Rect(0, 0, r.width - 38, 17);
+            var deleteItemRect = new Rect(itemRect.width, 0, 18, 17);
+            var scrollContainerRect = new Rect(2, 30, r.width - 5, r.height - 32);
+            var contentScrollRect = new Rect(0, 0, r.width - 20, Mathf.Max(SourceCollection.Dialogs.Count*itemRect.height, scrollContainerRect.height));
+            _dialogsScroll = GUI.BeginScrollView(scrollContainerRect, _dialogsScroll, contentScrollRect, false, true);
+            for (var i = 0; i < SourceCollection.Dialogs.Count; i++)
             {
-                if (!option.IsRedirection)
+                itemRect.y = i*(itemRect.height + 2);
+                deleteItemRect.y = itemRect.y;
+                if (itemRect.y < _dialogsScroll.y - itemRect.height)
                 {
-                    DeleteCleanupDialog(option.NextDialog);
+                    continue;
                 }
-                option.NextDialog = null;
-                option.IsRedirection = false;
-            }
-        }
-        GUI.color = prev;
-        return ret;
-    }
-
-    void DrawInlineDialogRequirements(Rect r, DialogOption d)
-    {
-        GUILayout.BeginArea(r);
-        GUILayout.BeginHorizontal();
-        Color prev = GUI.color;
-        GUI.color = Color.white;
-        GUIStyle gs = new GUIStyle(GUI.skin.button);
-        gs.fontSize = 8;
-        gs.alignment = TextAnchor.MiddleCenter;
-        gs.contentOffset = new Vector2(-1, 0);
-        gs.clipping = TextClipping.Overflow;
-        gs.border = new RectOffset(1, 1, 1, 1);
-        for (int i = d.NextDialog.Requirements.Count; i-- > 0; )
-        {
-            BaseRequirement req = d.NextDialog.Requirements[i];
-            if (req != null)
-            {
-                GUI.color = req.GetColor();
-                GUILayout.Box(new GUIContent(req.GetShortIdentifier(), req.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
-            }
-        }
-        GUI.color = prev;
-        GUILayout.EndHorizontal();
-        GUILayout.EndArea();
-    }
-
-    void DrawInlineDialogOptionActions(Rect r, DialogOption d)
-    {
-        GUILayout.BeginArea(r);
-        GUILayout.BeginHorizontal();
-        Color prev = GUI.color;
-        GUI.color = Color.white;
-        GUIStyle gs = new GUIStyle(GUI.skin.button);
-        gs.fontSize = 8;
-        gs.alignment = TextAnchor.MiddleCenter;
-        gs.contentOffset = new Vector2(-1, 0);
-        gs.clipping = TextClipping.Overflow;
-        gs.border = new RectOffset(1, 1, 1, 1);
-        for (int i = d.Actions.Count; i-- > 0; )
-        {
-            DialogOptionAction dot = d.Actions[i];
-            GUI.color = dot.GetColor();
-            GUILayout.Box(new GUIContent(dot.GetShortIdentifier(), dot.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
-        }
-        GUI.color = prev;
-        GUILayout.EndHorizontal();
-        GUILayout.EndArea();
-    }
-
-    bool DrawOptionRegion(Rect r, int depth)
-    {
-        bool ret = false;
-        Color prev = GUI.color;
-        GUI.color = nodeColor;
-        if (depth > 0)
-        {
-            GUI.Box(new Rect(r.x - r.width + indentWidth - 2, r.y, 5, r.height * depth), "", EditorStyles.textArea);
-        }
-        if (GUI.Button(new Rect(r.x-r.width+indentWidth+2, r.y, 20, 19), "+", EditorStyles.miniButton)) {
-            ret = true;
-        }
-        if (r.height + 17 > countedHeight) { countedHeight = r.height + 17; }
-        GUI.color = prev;
-        return ret;
-    }
-
-    Vector2 scrollbar;
-    Vector2 scrollbar2;
-    void DisplayOptionNodeInspector(Rect r, DialogOption dOption)
-    {
-        Color prev = GUI.color;
-        GUI.color = inspectorColor;
-        GUILayout.BeginArea(r, EditorStyles.textArea);
-        GUI.color = prev;
-        GUILayout.Space(5);
-        GUILayout.Label("Text", headerStyle);
-        GUILayout.Space(5);
-        GUILayout.BeginHorizontal();
-        string tText = dOption.Text.Description;
-        if (tText == null || tText.Length == 0)
-        {
-            tText = txtNotSetMsg;
-        }
-        GUILayout.Label(tText, lblStyle, GUILayout.MaxWidth(154));
-        if (GUILayout.Button("Edit", buttonStyle, GUILayout.Width(40)))
-        {
-            activeStringEditor = new LocalizedStringEditor(dOption.Text, "Option text");
-        }
-        GUILayout.EndHorizontal();
-        GUILayout.Space(5);
-        GUILayout.Label(new GUIContent("Tag", "User data"), headerStyle);
-        GUILayout.Space(5);
-        dOption.Tag = GUILayout.TextField(dOption.Tag);
-        GUILayout.Space(10);
-        GUILayout.Label("Connection", headerStyle);
-        GUILayout.Space(5);
-        if (GUILayout.Button("New Sub-Dialog", buttonStyle))
-        {
-            Dialog d = ScriptableObject.CreateInstance<Dialog>();
-            d.ID = GetUniqueID(d);
-            AddToAsset(d);
-            dOption.NextDialog = d;
-            dOption.IsRedirection = false;
-            CloseSubInspector();
-        }
-        GUILayout.Label(new GUIContent("Or link to existing: ", "Use with care, can result in infinite loops!"));
-        scrollbar = GUILayout.BeginScrollView(scrollbar);
-        List<Dialog> ddialogs = new List<Dialog>();
-        ddialogs = GetAllDialogsInChain(ddialogs, activeDialog);
-        for (int i = 0; i < ddialogs.Count; i++)
-        {
-            if (ddialogs[i].Options.Contains(dOption)) { continue; }
-            string dTitle = ddialogs[i].Title.Description;
-            if (dTitle == null || dTitle.Length == 0)
-            {
-                dTitle = txtNotSetMsg;
-            }
-            if (GUILayout.Button(dTitle, buttonStyle))
-            {
-                dOption.NextDialog = ddialogs[i];
-                dOption.IsRedirection = true;
-                CloseSubInspector();
-                break;
-            }
-        }
-        GUILayout.EndScrollView();
-        dOption.IgnoreRequirements = GUILayout.Toggle(dOption.IgnoreRequirements, "Ignore Requirements");
-        GUILayout.Label("Actions", headerStyle);
-        GUILayout.BeginHorizontal();
-        bool prevEnabled = GUI.enabled;
-        if (dOption.Actions.Count >= 6) { GUI.enabled = false; }
-        int index = EditorGUILayout.Popup(0, usableActionNames.ToArray());
-        if (index > 0)
-        {
-            DialogOptionAction tr = ScriptableObject.CreateInstance(usableActionTypes[index]) as DialogOptionAction;
-            AddToAsset(tr);
-            dOption.Actions.Add(tr);
-        }
-        GUI.enabled = prevEnabled;
-        if (GUILayout.Button("Remove all", buttonStyle))
-        {
-            for (int i = dOption.Actions.Count; i-- > 0; )
-            {
-                DestroyImmediate(dOption.Actions[i], true);
-                dOption.Actions.RemoveAt(i);
-            }
-        }
-        GUILayout.EndHorizontal();
-        scrollbar2 = GUILayout.BeginScrollView(scrollbar2);
-        for (int i = dOption.Actions.Count; i-- > 0; )
-        {
-            if (dOption.Actions[i] == null) { dOption.Actions.RemoveAt(i); continue; }
-            if (!InlineDisplayOptionActionEditor(dOption.Actions[i]))
-            {
-                DestroyImmediate(dOption.Actions[i], true);
-                dOption.Actions.RemoveAt(i);
-                continue;
-            }
-        }
-        GUILayout.EndScrollView();
-        if (GUILayout.Button("Close", buttonStyle))
-        {
-            //RemoveDuplicateNotifications(dOption.Actions);
-            CloseSubInspector();
-        }
-        GUILayout.EndArea();
-    }
-
-    bool InlineDisplayOptionActionEditor(DialogOptionAction tr)
-    {
-        bool ret = true;
-        GUILayout.BeginVertical(EditorStyles.textArea);
-        GUILayout.BeginHorizontal();
-        GUILayout.Label(tr.CachedName, EditorStyles.helpBox);
-        if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
-        GUILayout.EndHorizontal();
-        GUILayout.Space(2);
-        SerializedObject so = new SerializedObject(tr);
-        SerializedProperty sp = so.GetIterator();
-        sp.NextVisible(true);
-        if (sp != null)
-        {
-            while (sp.NextVisible(true))
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
-                EditorGUILayout.PropertyField(sp, GUIContent.none);
-                GUILayout.EndHorizontal();
-            }
-        }
-        GUILayout.EndVertical();
-        return ret;
-    }
-
-    void RemoveDuplicateActions(List<DialogOptionAction> sourceList)
-    {
-        List<DialogOptionAction> cleanList = new List<DialogOptionAction>();
-        for (int i = 0; i < sourceList.Count; i++)
-        {
-            bool found = false;
-            for (int cl = 0; cl < cleanList.Count; cl++)
-            {
-                if (cleanList[cl].GetType() == sourceList[i].GetType())
+                if (itemRect.y > _dialogsScroll.y + scrollContainerRect.height)
                 {
-                    found = true;
                     break;
                 }
+                if (SourceCollection.Dialogs[i] == _activeDialog)
+                {
+                    GUI.color = Color.gray;
+                }
+                var dTitle = SourceCollection.Dialogs[i].Title.Description;
+                if (string.IsNullOrEmpty(dTitle))
+                {
+                    dTitle = TxtNotSetMsg;
+                }
+                if (GUI.Button(itemRect, dTitle, "ButtonLeft"))
+                {
+                    if (_activeDialog == SourceCollection.Dialogs[i])
+                    {
+                        _activeDialog = null;
+                    }
+                    else
+                    {
+                        _activeDialog = SourceCollection.Dialogs[i];
+                    }
+                }
+                GUI.color = Color.white;
+                if (GUI.Button(deleteItemRect, "x", "ButtonRight"))
+                {
+                    DeleteCleanupDialog(SourceCollection.Dialogs[i]);
+                    if (SourceCollection.Dialogs[i] == _activeDialog)
+                    {
+                        CloseSubInspector();
+                        _activeDialog = null;
+                    }
+                    DeleteCollectionDialog(SourceCollection.Dialogs[i]);
+                }
             }
-            if (!found)
-            {
-                cleanList.Add(sourceList[i]);
-            }
+            GUI.EndScrollView();
         }
-        sourceList.Clear();
-        sourceList.AddRange(cleanList);
-    }
 
-    void DisplayDialogNodeInspector(Rect r, Dialog d)
-    {
-        Color prev = GUI.color;
-        GUI.color = inspectorColor;
-        GUILayout.BeginArea(r, EditorStyles.textArea);
-        GUI.color = prev;
-        GUILayout.Space(5);
-        GUILayout.Label("Title", headerStyle);
-        GUILayout.Space(5);
-        GUILayout.BeginHorizontal();
-        string dTitle = d.Title.Description;
-        if (dTitle == null || dTitle.Length == 0)
+        void DisplayDialogEditor(Rect r)
         {
-            dTitle = txtNotSetMsg;
-        }
-        GUILayout.Label(dTitle, lblStyle, GUILayout.MaxWidth(154));
-        if (GUILayout.Button("Edit", buttonStyle, GUILayout.Width(40)))
-        {
-            activeStringEditor = new LocalizedStringEditor(d.Title, "Dialog title");
-        }
-        GUILayout.EndHorizontal();
-        GUILayout.Space(5);
-        GUILayout.Label("Text" + (d.Texts.Count > 1 ? " (random)" : ""), headerStyle);
-        GUILayout.Space(5);
-        for (int i = 0; i < d.Texts.Count; i++)
-        {
-            string dtextsT = d.Texts[i].Description;
-            if (dtextsT == null || dtextsT.Length == 0)
+            if (_activeDialog == null)
             {
-                dtextsT = txtNotSetMsg;
+                return;
             }
+            GUI.color = _nodeColor;
+            GUILayout.BeginArea(new Rect(r.x, r.y, r.width, r.height));
+            if (_countedHeight < r.height)
+            {
+                _countedHeight = r.height - 15;
+            }
+            if (_countedWidth < r.width)
+            {
+                _countedWidth = r.width - 15;
+            }
+            float inspectorInset = 0;
+            if (_activeOptionNode != null || _activeSubDialog != null)
+            {
+                inspectorInset = RightColumnoverlayWidth;
+                if (_countedWidth > r.width)
+                {
+                    _mainViewScrollPos = new Vector2(_mainViewScrollPos.x + inspectorInset, _mainViewScrollPos.y);
+                }
+            }
+            _mainViewScrollPos = GUI.BeginScrollView(new Rect(0, 0, r.width - inspectorInset, r.height), _mainViewScrollPos, new Rect(0, 0, _countedWidth, _countedHeight));
+            if (!Mathf.Approximately(_previousState, _countedWidth + _countedHeight))
+            {
+                Repaint();
+                _previousState = _countedWidth + _countedHeight;
+            }
+            _countedHeight = 0;
+            _countedWidth = 0;
+            RecurseDialogs(new Rect(5, r.y + 5, NodeWidth, NodeHeight), 0, 0, _activeDialog);
+            GUI.EndScrollView();
+            GUILayout.EndArea();
+            GUI.color = Color.white;
+        }
+
+        int RecurseDialogs(Rect parent, int length, int depth, Dialog d)
+        {
+            var r = new Rect(parent.x + depth*NodeWidth, parent.y + length*NodeHeight, NodeWidth, NodeHeight);
+            DisplaySingleDialogNode(r, d);
+            var branchDepth = 1;
+            var lastOptionDepth = 0;
+            for (var i = 0; i < d.Options.Count; i++)
+            {
+                lastOptionDepth = branchDepth;
+                var move = DisplayDialogOption(new Rect(r.x + NodeWidth + IndentWidth, r.y + NodeHeight*lastOptionDepth, NodeWidth + IndentWidth, NodeHeight),
+                    d.Options[i]);
+                if (d.Options[i].NextDialog != null)
+                {
+                    if (d.Options[i].IsRedirection)
+                    {
+                        DisplayDialogLoop(new Rect(r.x + NodeWidth + IndentWidth*2, r.y + NodeHeight*lastOptionDepth, NodeWidth + IndentWidth, NodeHeight), d.Options[i]);
+                        branchDepth += 1;
+                    }
+                    else
+                    {
+                        branchDepth += RecurseDialogs(new Rect(parent.x + IndentWidth*2, parent.y, NodeWidth, NodeHeight), length + branchDepth, depth + 1,
+                            d.Options[i].NextDialog);
+                    }
+                }
+                else
+                {
+                    branchDepth += 1;
+                    if (d.Options[i].Actions.Count > 0)
+                    {
+                        branchDepth += 1;
+                    }
+                }
+                if (move != 0)
+                {
+                    if (move == -10)
+                    {
+                        if (d.Options.Count > 0)
+                        {
+                            var dI = d.Options[i];
+                            if (dI.NextDialog != null && !dI.IsRedirection)
+                            {
+                                DeleteCleanupDialog(dI.NextDialog);
+                            }
+                            for (var t = dI.Actions.Count; t-- > 0;)
+                            {
+                                DestroyImmediate(dI.Actions[t], true);
+                            }
+                            d.Options.Remove(dI);
+                            DestroyImmediate(dI, true);
+                        }
+                    }
+                    else if (i + move >= 0 & i + move < d.Options.Count)
+                    {
+                        var dO = d.Options[i];
+                        d.Options[i] = d.Options[i + move];
+                        d.Options[i + move] = dO;
+                    }
+                }
+            }
+            if (DrawOptionRegion(new Rect(r.x + NodeWidth + IndentWidth, r.y + NodeHeight, NodeWidth + IndentWidth, NodeHeight), lastOptionDepth))
+            {
+                var dO = CreateInstance<DialogOption>();
+                AddToAsset(dO);
+                d.Options.Add(dO);
+            }
+            branchDepth++;
+            return branchDepth;
+        }
+
+        int DisplayDialogOption(Rect r, DialogOption option)
+        {
+            var prev = GUI.color;
+            GUI.color = _nodeColor;
+            var gs = new GUIStyle(GUI.skin.button)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = 8,
+                border = new RectOffset(2, 2, 2, 2)
+            };
+            var rect = new Rect(r.x - r.width + IndentWidth + 1, r.y + r.height*0.6f, r.width, r.height*0.4f);
+            if (rect.y + rect.height > _countedHeight)
+            {
+                _countedHeight = rect.y + rect.height;
+            }
+            if (rect.x + rect.width > _countedWidth)
+            {
+                _countedWidth = rect.x + rect.width;
+            }
+            var ret = 0;
+            var tTitle = option.Text.Description;
+            if (string.IsNullOrEmpty(tTitle))
+            {
+                tTitle = TxtNotSetMsg;
+            }
+            if (GUI.Button(rect, tTitle, gs))
+            {
+                InspectOptionNode(option);
+            }
+            gs.alignment = TextAnchor.MiddleCenter;
+            if (GUI.Button(new Rect(rect.x - 18, rect.y - 5, 17, 17), "˄", gs))
+            {
+                ret = -1;
+            }
+            if (GUI.Button(new Rect(rect.x - 34, rect.y - 5, 17, 17), "˅", gs))
+            {
+                ret = 1;
+            }
+            if (GUI.Button(new Rect(rect.x - 50, rect.y - 5, 17, 17), "x", gs))
+            {
+                ret = -10;
+            }
+            DrawInlineDialogOptionActions(new Rect(rect.x + IndentWidth, rect.y + rect.height, rect.width, rect.height + 10), option);
+            if (option.NextDialog != null)
+            {
+                var prevEnabled = GUI.enabled;
+                GUI.enabled = !option.IgnoreRequirements & prevEnabled;
+                DrawInlineDialogRequirements(new Rect(rect.x + IndentWidth, rect.y - (rect.height + 2), rect.width, rect.height + 10), option);
+                GUI.enabled = prevEnabled;
+                if (GUI.Button(new Rect(rect.x + rect.width - 17, r.y + 5, 17, 13), "x", gs))
+                {
+                    if (!option.IsRedirection)
+                    {
+                        DeleteCleanupDialog(option.NextDialog);
+                    }
+                    option.NextDialog = null;
+                    option.IsRedirection = false;
+                }
+            }
+            GUI.color = prev;
+            return ret;
+        }
+
+        void DrawInlineDialogRequirements(Rect r, DialogOption d)
+        {
+            GUILayout.BeginArea(r);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(dtextsT, lblStyle, GUILayout.MaxWidth(134));
-            if (GUILayout.Button("Edit", buttonStyle, GUILayout.Width(40)))
+            var prev = GUI.color;
+            var gs = new GUIStyle(GUI.skin.button)
             {
-                activeStringEditor = new LocalizedStringEditor(d.Texts[i], "Dialog text");
+                fontSize = 8,
+                alignment = TextAnchor.MiddleCenter,
+                contentOffset = new Vector2(-1, 0),
+                clipping = TextClipping.Overflow,
+                border = new RectOffset(1, 1, 1, 1)
+            };
+            for (var i = d.NextDialog.Requirements.Count; i-- > 0;)
+            {
+                var req = d.NextDialog.Requirements[i];
+                if (req != null)
+                {
+                    GUI.color = req.GetColor();
+                    GUILayout.Box(new GUIContent(req.GetShortIdentifier(), req.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
+                }
             }
-            if (GUILayout.Button("x", buttonStyle, GUILayout.Width(20)))
+            GUI.color = prev;
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        void DrawInlineDialogOptionActions(Rect r, DialogOption d)
+        {
+            GUILayout.BeginArea(r);
+            GUILayout.BeginHorizontal();
+            var prev = GUI.color;
+            GUI.color = Color.white;
+            var gs = new GUIStyle(GUI.skin.button)
             {
-                d.Texts.RemoveAt(i);
+                fontSize = 8,
+                alignment = TextAnchor.MiddleCenter,
+                contentOffset = new Vector2(-1, 0),
+                clipping = TextClipping.Overflow,
+                border = new RectOffset(1, 1, 1, 1)
+            };
+            for (var i = d.Actions.Count; i-- > 0;)
+            {
+                var dot = d.Actions[i];
+                GUI.color = dot.GetColor();
+                GUILayout.Box(new GUIContent(dot.GetShortIdentifier(), dot.GetToolTip()), gs, GUILayout.Width(19), GUILayout.Height(15));
+            }
+            GUI.color = prev;
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        bool DrawOptionRegion(Rect r, int depth)
+        {
+            var ret = false;
+            var prev = GUI.color;
+            GUI.color = _nodeColor;
+            if (depth > 0)
+            {
+                GUI.Box(new Rect(r.x - r.width + IndentWidth - 2, r.y, 5, r.height*depth), "", EditorStyles.textArea);
+            }
+            if (GUI.Button(new Rect(r.x - r.width + IndentWidth + 2, r.y, 20, 19), "+", EditorStyles.miniButton))
+            {
+                ret = true;
+            }
+            if (r.height + 17 > _countedHeight)
+            {
+                _countedHeight = r.height + 17;
+            }
+            GUI.color = prev;
+            return ret;
+        }
+
+        void DisplayOptionNodeInspector(Rect r, DialogOption dOption)
+        {
+            var prev = GUI.color;
+            GUI.color = _inspectorColor;
+            GUILayout.BeginArea(r, EditorStyles.textArea);
+            GUI.color = prev;
+            GUILayout.Space(5);
+            GUILayout.Label("Text", _headerStyle);
+            GUILayout.Space(5);
+            GUILayout.BeginHorizontal();
+            var tText = dOption.Text.Description;
+            if (string.IsNullOrEmpty(tText))
+            {
+                tText = TxtNotSetMsg;
+            }
+            GUILayout.Label(tText, _lblStyle, GUILayout.MaxWidth(154));
+            if (GUILayout.Button("Edit", _buttonStyle, GUILayout.Width(40)))
+            {
+                _activeStringEditor = new LocalizedStringEditor(dOption.Text, "Option text");
             }
             GUILayout.EndHorizontal();
             GUILayout.Space(5);
-        }
-        if (d.Texts.Count < 3)
-        {
-            if (GUILayout.Button("Add Variation", buttonStyle))
-            {
-                d.Texts.Add(new DialogSystem.Localization.LocalizedString(""));
-            }
+            GUILayout.Label(new GUIContent("Tag", "User data"), _headerStyle);
             GUILayout.Space(5);
-        }
-        GUILayout.Label(new GUIContent("Tag", "User data"), headerStyle);
-        GUILayout.Space(5);
-        d.Tag = GUILayout.TextField(d.Tag);
-        GUILayout.Space(10);
-        GUILayout.Label("Requirements", headerStyle);
-        if (d.Requirements.Count > 1)
-        {
-            d.RequirementMode = (DialogRequirementMode)EditorGUILayout.EnumPopup("Mode:",d.RequirementMode);
-        }
-        GUILayout.BeginHorizontal();
-        bool prevEnabled = GUI.enabled;
-        if (d.Requirements.Count >= 6) { GUI.enabled = false; }
-        int index = EditorGUILayout.Popup(0, usableRequirementNames.ToArray());
-        if (index > 0)
-        {
-            BaseRequirement bs = ScriptableObject.CreateInstance(usableRequirementTypes[index]) as BaseRequirement;
-            AddToAsset(bs);
-            d.Requirements.Add(bs);
-        }
-        GUI.enabled = prevEnabled;
-        if (GUILayout.Button("Remove all", buttonStyle))
-        {
-            for (int i = d.Requirements.Count; i-- > 0; )
+            dOption.Tag = GUILayout.TextField(dOption.Tag);
+            GUILayout.Space(10);
+            GUILayout.Label("Connection", _headerStyle);
+            GUILayout.Space(5);
+            if (GUILayout.Button("New Sub-Dialog", _buttonStyle))
             {
-                DestroyImmediate(d.Requirements[i], true);
-                d.Requirements.RemoveAt(i);
+                var d = CreateInstance<Dialog>();
+                d.ID = GetUniqueId();
+                AddToAsset(d);
+                dOption.NextDialog = d;
+                dOption.IsRedirection = false;
+                CloseSubInspector();
             }
-        }
-        GUILayout.EndHorizontal();
-        scrollbar = GUILayout.BeginScrollView(scrollbar, false, true);
-        for (int i = d.Requirements.Count; i-- > 0; )
-        {
-            if (d.Requirements[i] == null) { d.Requirements.RemoveAt(i); continue; }
-            if (!DrawInlineRequirement(d.Requirements[i])) {
-                DestroyImmediate(d.Requirements[i], true);
-                d.Requirements.RemoveAt(i); 
-                continue;
-            }
-        }
-        GUILayout.EndScrollView();
-        if (GUILayout.Button("Close", buttonStyle))
-        {
-            //RemoveDuplicateRequirements(d.Requirements);
-            CloseSubInspector();
-        }
-        GUILayout.EndArea();
-    }
-
-    void RemoveDuplicateRequirements(List<BaseRequirement> sourceList)
-    {
-        List<BaseRequirement> cleanList = new List<BaseRequirement>();
-        for (int i = 0; i < sourceList.Count; i++)
-        {
-            bool found = false;
-            for (int cl = 0; cl < cleanList.Count; cl++)
+            GUILayout.Label(new GUIContent("Or link to existing: ", "Use with care, can result in infinite loops!"));
+            _scrollbar = GUILayout.BeginScrollView(_scrollbar);
+            var ddialogs = new List<Dialog>();
+            ddialogs = GetAllDialogsInChain(ddialogs, _activeDialog);
+            for (var i = 0; i < ddialogs.Count; i++)
             {
-                if (cleanList[cl].GetType() == sourceList[i].GetType())
+                if (ddialogs[i].Options.Contains(dOption))
                 {
-                    found = true;
+                    continue;
+                }
+                var dTitle = ddialogs[i].Title.Description;
+                if (string.IsNullOrEmpty(dTitle))
+                {
+                    dTitle = TxtNotSetMsg;
+                }
+                if (GUILayout.Button(dTitle, _buttonStyle))
+                {
+                    dOption.NextDialog = ddialogs[i];
+                    dOption.IsRedirection = true;
+                    CloseSubInspector();
                     break;
                 }
             }
-            if (!found)
+            GUILayout.EndScrollView();
+            dOption.IgnoreRequirements = GUILayout.Toggle(dOption.IgnoreRequirements, "Ignore Requirements");
+            GUILayout.Label("Actions", _headerStyle);
+            GUILayout.BeginHorizontal();
+            var prevEnabled = GUI.enabled;
+            if (dOption.Actions.Count >= 6)
             {
-                cleanList.Add(sourceList[i]);
+                GUI.enabled = false;
             }
-        }
-        sourceList.Clear();
-        sourceList.AddRange(cleanList);
-    }
-
-    bool DrawInlineRequirement(BaseRequirement dr)
-    {
-        bool ret = true;
-        GUILayout.BeginVertical(EditorStyles.textArea);
-        GUILayout.BeginHorizontal();
-        GUILayout.Label(dr.CachedName, EditorStyles.helpBox);
-        if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16))) { ret = false; }
-        GUILayout.EndHorizontal();
-        GUILayout.Space(2);
-        SerializedObject so = new SerializedObject(dr);
-        SerializedProperty sp = so.GetIterator();
-        sp.NextVisible(true);
-        if (sp != null)
-        {
-            while (sp.NextVisible(true))
+            var index = EditorGUILayout.Popup(0, _usableActionNames.ToArray());
+            if (index > 0)
             {
+                var tr = CreateInstance(_usableActionTypes[index]) as DialogOptionAction;
+                AddToAsset(tr);
+                dOption.Actions.Add(tr);
+            }
+            GUI.enabled = prevEnabled;
+            if (GUILayout.Button("Remove all", _buttonStyle))
+            {
+                for (var i = dOption.Actions.Count; i-- > 0;)
+                {
+                    DestroyImmediate(dOption.Actions[i], true);
+                    dOption.Actions.RemoveAt(i);
+                }
+            }
+            GUILayout.EndHorizontal();
+            _scrollbar2 = GUILayout.BeginScrollView(_scrollbar2);
+            for (var i = dOption.Actions.Count; i-- > 0;)
+            {
+                if (dOption.Actions[i] == null)
+                {
+                    dOption.Actions.RemoveAt(i);
+                    continue;
+                }
+                if (!InlineDisplayOptionActionEditor(dOption.Actions[i]))
+                {
+                    DestroyImmediate(dOption.Actions[i], true);
+                    dOption.Actions.RemoveAt(i);
+                }
+            }
+            GUILayout.EndScrollView();
+            if (GUILayout.Button("Close", _buttonStyle))
+            {
+                //RemoveDuplicateNotifications(dOption.Actions);
+                CloseSubInspector();
+            }
+            GUILayout.EndArea();
+        }
+
+        bool InlineDisplayOptionActionEditor(DialogOptionAction tr)
+        {
+            var ret = true;
+            GUILayout.BeginVertical(EditorStyles.textArea);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(tr.CachedName, EditorStyles.helpBox);
+            if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16)))
+            {
+                ret = false;
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(2);
+            if (!tr.DrawComplexGui())
+            {
+                var so = new SerializedObject(tr);
+                var sp = so.GetIterator();
+                sp.NextVisible(true);
+                while (sp.NextVisible(true))
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
+                    EditorGUILayout.PropertyField(sp, GUIContent.none);
+                    GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.EndVertical();
+            return ret;
+        }
+
+        void RemoveDuplicateActions(List<DialogOptionAction> sourceList)
+        {
+            var cleanList = new List<DialogOptionAction>();
+            for (var i = 0; i < sourceList.Count; i++)
+            {
+                var found = false;
+                for (var cl = 0; cl < cleanList.Count; cl++)
+                {
+                    if (cleanList[cl].GetType() == sourceList[i].GetType())
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    cleanList.Add(sourceList[i]);
+                }
+            }
+            sourceList.Clear();
+            sourceList.AddRange(cleanList);
+        }
+
+        void DisplayDialogNodeInspector(Rect r, Dialog d)
+        {
+            var prev = GUI.color;
+            GUI.color = _inspectorColor;
+            GUILayout.BeginArea(r, EditorStyles.textArea);
+            GUI.color = prev;
+            GUILayout.Space(5);
+            GUILayout.Label("Title", _headerStyle);
+            GUILayout.Space(5);
+            GUILayout.BeginHorizontal();
+            var dTitle = d.Title.Description;
+            if (string.IsNullOrEmpty(dTitle))
+            {
+                dTitle = TxtNotSetMsg;
+            }
+            GUILayout.Label(dTitle, _lblStyle, GUILayout.MaxWidth(154));
+            if (GUILayout.Button("Edit", _buttonStyle, GUILayout.Width(40)))
+            {
+                _activeStringEditor = new LocalizedStringEditor(d.Title, "Dialog title");
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
+            GUILayout.Label("Text" + (d.Texts.Count > 1 ? " (random)" : ""), _headerStyle);
+            GUILayout.Space(5);
+            for (var i = 0; i < d.Texts.Count; i++)
+            {
+                var dtextsT = d.Texts[i].Description;
+                if (string.IsNullOrEmpty(dtextsT))
+                {
+                    dtextsT = TxtNotSetMsg;
+                }
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
-                EditorGUILayout.PropertyField(sp, GUIContent.none);
+                GUILayout.Label(dtextsT, _lblStyle, GUILayout.MaxWidth(134));
+                if (GUILayout.Button("Edit", _buttonStyle, GUILayout.Width(40)))
+                {
+                    _activeStringEditor = new LocalizedStringEditor(d.Texts[i], "Dialog text");
+                }
+                if (GUILayout.Button("x", _buttonStyle, GUILayout.Width(20)))
+                {
+                    d.Texts.RemoveAt(i);
+                }
                 GUILayout.EndHorizontal();
+                GUILayout.Space(5);
+            }
+            if (d.Texts.Count < 3)
+            {
+                if (GUILayout.Button("Add Variation", _buttonStyle))
+                {
+                    d.Texts.Add(new LocalizedString(""));
+                }
+                GUILayout.Space(5);
+            }
+            GUILayout.Label(new GUIContent("Tag", "User data"), _headerStyle);
+            GUILayout.Space(5);
+            d.Tag = GUILayout.TextField(d.Tag);
+            GUILayout.Space(10);
+            GUILayout.Label("Requirements", _headerStyle);
+            if (d.Requirements.Count > 1)
+            {
+                d.RequirementMode = (DialogRequirementMode) EditorGUILayout.EnumPopup("Mode:", d.RequirementMode);
+            }
+            GUILayout.BeginHorizontal();
+            var prevEnabled = GUI.enabled;
+            if (d.Requirements.Count >= 6)
+            {
+                GUI.enabled = false;
+            }
+            var index = EditorGUILayout.Popup(0, _usableRequirementNames.ToArray());
+            if (index > 0)
+            {
+                var bs = CreateInstance(_usableRequirementTypes[index]) as DialogRequirement;
+                AddToAsset(bs);
+                d.Requirements.Add(bs);
+            }
+            GUI.enabled = prevEnabled;
+            if (GUILayout.Button("Remove all", _buttonStyle))
+            {
+                for (var i = d.Requirements.Count; i-- > 0;)
+                {
+                    DestroyImmediate(d.Requirements[i], true);
+                    d.Requirements.RemoveAt(i);
+                }
+            }
+            GUILayout.EndHorizontal();
+            _scrollbar = GUILayout.BeginScrollView(_scrollbar, false, true);
+            for (var i = d.Requirements.Count; i-- > 0;)
+            {
+                if (d.Requirements[i] == null)
+                {
+                    d.Requirements.RemoveAt(i);
+                    continue;
+                }
+                if (!DrawInlineRequirement(d.Requirements[i]))
+                {
+                    DestroyImmediate(d.Requirements[i], true);
+                    d.Requirements.RemoveAt(i);
+                }
+            }
+            GUILayout.EndScrollView();
+            if (GUILayout.Button("Close", _buttonStyle))
+            {
+                //RemoveDuplicateRequirements(d.Requirements);
+                CloseSubInspector();
+            }
+            GUILayout.EndArea();
+        }
+
+        void RemoveDuplicateRequirements(List<DialogRequirement> sourceList)
+        {
+            var cleanList = new List<DialogRequirement>();
+            for (var i = 0; i < sourceList.Count; i++)
+            {
+                var found = false;
+                for (var cl = 0; cl < cleanList.Count; cl++)
+                {
+                    if (cleanList[cl].GetType() == sourceList[i].GetType())
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    cleanList.Add(sourceList[i]);
+                }
+            }
+            sourceList.Clear();
+            sourceList.AddRange(cleanList);
+        }
+
+        bool DrawInlineRequirement(DialogRequirement dr)
+        {
+            var ret = true;
+            GUILayout.BeginVertical(EditorStyles.textArea);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(dr.CachedName, EditorStyles.helpBox);
+            if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(16)))
+            {
+                ret = false;
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(2);
+            if (!dr.DrawComplexGui())
+            {
+                var so = new SerializedObject(dr);
+                var sp = so.GetIterator();
+                sp.NextVisible(true);
+                while (sp.NextVisible(true))
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(sp.name, GUILayout.ExpandWidth(true));
+                    EditorGUILayout.PropertyField(sp, GUIContent.none);
+                    GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.EndVertical();
+            return ret;
+        }
+
+        void DisplayDialogLoop(Rect r, DialogOption dOption)
+        {
+            var prev = GUI.color;
+            GUI.color = Color.yellow;
+            var ndTitle = dOption.NextDialog.Title.Description;
+            if (string.IsNullOrEmpty(ndTitle))
+            {
+                ndTitle = TxtNotSetMsg;
+            }
+            ndTitle = string.Format("({0}) {1}", dOption.NextDialog.ID, ndTitle);
+            if (GUI.Button(new Rect(r.x, r.y + 5, r.width, r.height - 5), "Loop: " + ndTitle))
+            {
+                InspectOptionNode(dOption);
+            }
+            GUI.color = prev;
+            if (r.x + r.width > _countedWidth)
+            {
+                _countedWidth = r.x + r.width;
+            }
+            if (r.y + r.height > _countedHeight)
+            {
+                _countedHeight = r.y + r.height;
             }
         }
-        GUILayout.EndVertical();
-        return ret;
-    }
 
-    void DisplayDialogLoop(Rect r, DialogOption dOption)
-    {
-        Color prev = GUI.color;
-        GUI.color = Color.yellow;
-        string ndTitle = dOption.NextDialog.Title.Description;
-        if (ndTitle == null || ndTitle.Length == 0)
+        void DisplaySingleDialogNode(Rect r, Dialog d)
         {
-            ndTitle = txtNotSetMsg;
-        }
-        ndTitle = string.Format("({0}) {1}", dOption.NextDialog.ID, ndTitle);
-        if (GUI.Button(new Rect(r.x, r.y+5, r.width, r.height-5), "Loop: " + ndTitle))
-        {
-            InspectOptionNode(dOption);
-        }
-        GUI.color = prev;
-        if (r.x + r.width > countedWidth) { countedWidth = r.x + r.width; }
-        if (r.y + r.height > countedHeight) { countedHeight = r.y + r.height; }
-    }
-
-    void DisplaySingleDialogNode(Rect r, Dialog d, int depth, int indent)
-    {
-        Rect title = new Rect(r.x, r.y+5, r.width-20, r.height-5);
-        if (title.y + title.height > countedHeight) { countedHeight = title.y + title.height; }
-        if (title.x + title.width > countedWidth) { countedWidth = title.x + title.width; }
-        string dTitle = d.Title.Description;
-        if (dTitle == null || dTitle.Length == 0)
-        {
-            dTitle = txtNotSetMsg;
-        }
-        dTitle = string.Format("({0}) {1}", d.ID, dTitle);
-        if (GUI.Button(title, dTitle))
-        {
-            InspectDialogNode(d);
-        }
-    }
-
-    private List<Dialog> GetAllDialogsInChain(List<Dialog> dl, Dialog d)
-    {
-        if (!dl.Contains(d))
-        {
-            dl.Add(d);
-        }
-        for (int i = 0; i < d.Options.Count; i++)
-        {
-            if (d.Options[i].NextDialog != null)
+            var rect = new Rect(r.x, r.y + 5, r.width - 20, r.height - 5);
+            if (rect.y + rect.height > _countedHeight)
             {
+                _countedHeight = rect.y + rect.height;
+            }
+            if (rect.x + rect.width > _countedWidth)
+            {
+                _countedWidth = rect.x + rect.width;
+            }
+            var dTitle = d.Title.Description;
+            if (string.IsNullOrEmpty(dTitle))
+            {
+                dTitle = TxtNotSetMsg;
+            }
+            dTitle = string.Format("({0}) {1}", d.ID, dTitle);
+            if (GUI.Button(rect, dTitle))
+            {
+                InspectDialogNode(d);
+            }
+        }
+
+        static List<Dialog> GetAllDialogsInChain(List<Dialog> dl, Dialog d)
+        {
+            if (!dl.Contains(d))
+            {
+                dl.Add(d);
+            }
+            for (var i = 0; i < d.Options.Count; i++)
+            {
+                if (d.Options[i].NextDialog == null) continue;
                 if (!d.Options[i].IsRedirection)
                 {
                     GetAllDialogsInChain(dl, d.Options[i].NextDialog);
                 }
             }
+            return dl;
         }
-        return dl;
     }
-
 }
