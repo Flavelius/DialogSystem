@@ -47,10 +47,13 @@ namespace DialogSystem
         Vector2 _scrollbar;
         Vector2 _scrollbar2;
         public DialogCollection SourceCollection;
+        public ConversationLibrary Library;
+
+        public static bool IsOpen = false;
 
         int GetUniqueId()
         {
-            return SourceCollection.GetUniqueId();
+            return Library.EditorGetNewId(SourceCollection);
         }
 
         void CollectUsableRequirementTypes()
@@ -59,7 +62,9 @@ namespace DialogSystem
             _usableRequirementNames.Clear();
             var types = new List<Type>
                 (
-                Assembly.GetAssembly(typeof (DialogRequirement)).GetTypes().Where(i => i.IsSubclassOf(typeof (DialogRequirement)) && i.IsPublic && i.IsClass && !i.IsAbstract)
+                Assembly.GetAssembly(typeof (DialogRequirement))
+                    .GetTypes()
+                    .Where(i => i.IsSubclassOf(typeof (DialogRequirement)) && i.IsPublic && i.IsClass && !i.IsAbstract)
                 );
             _usableRequirementTypes.Add(null);
             _usableRequirementNames.Add("Add");
@@ -138,12 +143,35 @@ namespace DialogSystem
             _buttonStyle = GUI.skin.GetStyle("PreButton");
             CollectUsableRequirementTypes();
             CollectUsableActionTypes();
+            LoadLibrary();
+        }
+
+        void LoadLibrary()
+        {
+            var assets = AssetDatabase.FindAssets("t:ConversationLibrary");
+            foreach (var s in assets)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(s);
+                var o = AssetDatabase.LoadAssetAtPath(path, typeof (ConversationLibrary));
+                var dit = o as ConversationLibrary;
+                if (dit != null)
+                {
+                    Library = dit;
+                    break;
+                }
+            }
+            if (Library == null)
+            {
+                Debug.LogError("ConversationLibrary could not be loaded");
+                Close();
+            }
         }
 
         void OnEnable()
         {
             CollectUsableActionTypes();
             CollectUsableRequirementTypes();
+            IsOpen = true;
         }
 
         void InspectOptionNode(DialogOption o)
@@ -218,6 +246,7 @@ namespace DialogSystem
         void OnDestroy()
         {
             Cleanup();
+            IsOpen = false;
         }
 
         public static void OpenEdit(DialogCollection collection)
@@ -603,7 +632,7 @@ namespace DialogSystem
                 {
                     if (tTitle.Length > 50)
                     {
-                        tTitle = string.Format("{0}[..]",tTitle.Substring(0, 50));
+                        tTitle = string.Format("{0}[..]", tTitle.Substring(0, 50));
                     }
                 }
             }

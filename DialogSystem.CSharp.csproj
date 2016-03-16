@@ -76,6 +76,7 @@
     <Compile Include="Assets\DialogSystem\DialogCollection.cs" />
     <Compile Include="Assets\DialogSystem\Enums.cs" />
     <Compile Include="Assets\DialogSystem\Interfaces.cs" />
+    <Compile Include="Assets\DialogSystem\Internal\ConversationLibrary.cs" />
     <Compile Include="Assets\DialogSystem\Internal\Dialog.cs" />
     <Compile Include="Assets\DialogSystem\Internal\DialogAttribute.cs" />
     <Compile Include="Assets\DialogSystem\Internal\DialogOption.cs" />

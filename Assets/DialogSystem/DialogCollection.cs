@@ -7,21 +7,16 @@ namespace DialogSystem
     [CreateAssetMenu]
     public class DialogCollection: ScriptableObject
     {
-        public List<Dialog> Dialogs = new List<Dialog>();
+        [HideInInspector] public List<Dialog> Dialogs = new List<Dialog>();
 
-        public int GetUniqueId()
+        public List<int> GetUsedIds()
         {
             var usedIDs = new List<int>();
             foreach (var dialog in Dialogs)
             {
                 RetrieveIDs(dialog, usedIDs);
             }
-            var newId = 0;
-            while (usedIDs.Contains(newId))
-            {
-                newId++;
-            }
-            return newId;
+            return usedIDs;
         }
 
         static void RetrieveIDs(Dialog current, List<int> idList)
