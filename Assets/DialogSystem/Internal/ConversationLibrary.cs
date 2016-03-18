@@ -24,8 +24,7 @@ namespace DialogSystem.Internal
         }
 
 #if UNITY_EDITOR
-
-        [SerializeField, HideInInspector] int _lastUsedDialogID;
+        [SerializeField, HideInInspector] int _lastUsedDialogId;
 
         public List<DialogCollection> EditorGetCollections()
         {
@@ -54,10 +53,14 @@ namespace DialogSystem.Internal
                     usedIDs.Add(id);
                 }
             }
-            var freeId = EditorAllowOverrideOldIDs ? 0 : _lastUsedDialogID;
+            var freeId = EditorAllowOverrideOldIDs ? 0 : _lastUsedDialogId;
             while (usedIDs.Contains(freeId))
             {
                 freeId++;
+            }
+            if (!EditorAllowOverrideOldIDs)
+            {
+                _lastUsedDialogId = freeId;
             }
             return freeId;
         }

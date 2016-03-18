@@ -13,6 +13,7 @@ namespace DialogSystem
         Vector2 _collectionScroll;
         string _newCollectionName = string.Empty;
         bool _showAddInterface;
+        string _filter = "";
 
         public override void OnInspectorGUI()
         {
@@ -23,6 +24,11 @@ namespace DialogSystem
             GUILayout.Label(new GUIContent("Allow overriding old IDs",
                 "So Dialogs can get IDs that became unused. Allow this, if old IDs are not saved somewhere in a relevant context"));
             lib.EditorAllowOverrideOldIDs = EditorGUILayout.Toggle(lib.EditorAllowOverrideOldIDs);
+            GUILayout.Label("Filter:");
+            var prevColor = GUI.backgroundColor;
+            GUI.backgroundColor = !string.IsNullOrEmpty(_filter) ? Color.green : prevColor;
+            _filter = EditorGUILayout.TextField(_filter);
+            GUI.backgroundColor = prevColor;
             GUILayout.EndHorizontal();
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
             EditorGUILayout.LabelField(string.Format("{0} Collections", _collections.Count));
@@ -34,7 +40,7 @@ namespace DialogSystem
             EditorGUILayout.EndHorizontal();
             if (_showAddInterface)
             {
-                var prevColor = GUI.backgroundColor;
+                prevColor = GUI.backgroundColor;
                 GUI.backgroundColor = NameExists(_newCollectionName) ? Color.red : Color.white;
                 _newCollectionName = EditorGUILayout.TextField("Unique name:", _newCollectionName);
                 GUI.backgroundColor = prevColor;
@@ -46,6 +52,7 @@ namespace DialogSystem
                     if (Add(newCollection, _newCollectionName))
                     {
                         _showAddInterface = false;
+                        ReloadAsset();
                     }
                 }
                 GUI.enabled = prevEnabled;
@@ -59,14 +66,18 @@ namespace DialogSystem
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             for (var i = 0; i < _collections.Count; i++)
             {
+                if (!string.IsNullOrEmpty(_filter) && _collections[i].name.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) <0)
+                {
+                    continue;
+                }
                 var delete = false;
                 EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-                EditorGUILayout.LabelField(_collections[i].name, GUILayout.Width(100));
+                GUILayout.Label(_collections[i].name, GUILayout.Width(100));
                 if (GUILayout.Button("Edit", EditorStyles.miniButton, GUILayout.Width(32)))
                 {
                     DialogEditor.OpenEdit(_collections[i]);
                 }
-                EditorGUILayout.LabelField(string.Format("{0} Dialogs", _collections[i].Dialogs.Count));    
+                GUILayout.Label(string.Format("{0} Dialogs", _collections[i].Dialogs.Count));    
                 if (GUILayout.Button("x", EditorStyles.miniButton, GUILayout.Width(24)))
                 {
                     delete = true;
@@ -75,6 +86,7 @@ namespace DialogSystem
                 if (delete)
                 {
                     RemoveAndDelete(_collections[i]);
+                    ReloadAsset();
                     break;
                 }
             }
@@ -126,6 +138,11 @@ namespace DialogSystem
             if (!_collections.Remove(collection)) return;
             DestroyImmediate(collection, true);
             EditorUtility.SetDirty(target);
+        }
+
+        void ReloadAsset()
+        {
+            AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(target));
         }
     }
 }
