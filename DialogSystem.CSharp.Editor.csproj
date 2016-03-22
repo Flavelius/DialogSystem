@@ -105,6 +105,7 @@
     <Compile Include="Assets\DialogSystem\Editor\ConversationEngineInspector.cs" />
     <Compile Include="Assets\DialogSystem\Editor\ConversationLibraryEditor.cs" />
     <Compile Include="Assets\DialogSystem\Editor\DialogEditor.cs" />
+    <Compile Include="Assets\DialogSystem\Editor\DialogIdAllocator.cs" />
     <Compile Include="Assets\DialogSystem\Editor\LocalizedStringEditor.cs" />
   </ItemGroup>
   <ItemGroup>

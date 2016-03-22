@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 
 namespace DialogSystem.Internal
@@ -24,46 +23,10 @@ namespace DialogSystem.Internal
         }
 
 #if UNITY_EDITOR
-        [SerializeField, HideInInspector] int _lastUsedDialogId;
-
         public List<DialogCollection> EditorGetCollections()
         {
             return _collections;
         } 
-
-        public bool EditorAllowOverrideOldIDs = false;
-
-        public int EditorGetNewId(DialogCollection collection)
-        {
-            var usedIDs = new HashSet<int>();
-            for (var i = _collections.Count; i-- > 0;)
-            {
-                //var objs = AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(_collections[i]));
-                //foreach (var o in objs)
-                //{
-                //    var d = o as Dialog;
-                //    if (d != null)
-                //    {
-                //        usedIDs.Add(d.ID);
-                //    }
-                //}
-                var ids = _collections[i].GetUsedIds();
-                foreach (var id in ids)
-                {
-                    usedIDs.Add(id);
-                }
-            }
-            var freeId = EditorAllowOverrideOldIDs ? 0 : _lastUsedDialogId;
-            while (usedIDs.Contains(freeId))
-            {
-                freeId++;
-            }
-            if (!EditorAllowOverrideOldIDs)
-            {
-                _lastUsedDialogId = freeId;
-            }
-            return freeId;
-        }
 #endif
     }
 }

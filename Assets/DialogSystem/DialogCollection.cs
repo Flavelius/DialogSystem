@@ -9,6 +9,7 @@ namespace DialogSystem
     {
         [HideInInspector] public List<Dialog> Dialogs = new List<Dialog>();
 
+#if UNITY_EDITOR
         public List<int> GetUsedIds()
         {
             var usedIDs = new List<int>();
@@ -29,5 +30,6 @@ namespace DialogSystem
                 RetrieveIDs(dialogOption.NextDialog, idList);
             }
         }
+#endif
     }
 }

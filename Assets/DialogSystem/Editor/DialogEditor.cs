@@ -47,13 +47,13 @@ namespace DialogSystem
         Vector2 _scrollbar;
         Vector2 _scrollbar2;
         public DialogCollection SourceCollection;
-        public ConversationLibrary Library;
+        public DialogIdAllocator IdAllocator;
 
         public static bool IsOpen = false;
 
         int GetUniqueId()
         {
-            return Library.EditorGetNewId(SourceCollection);
+            return IdAllocator.GetNewId(SourceCollection);
         }
 
         void CollectUsableRequirementTypes()
@@ -143,26 +143,27 @@ namespace DialogSystem
             _buttonStyle = GUI.skin.GetStyle("PreButton");
             CollectUsableRequirementTypes();
             CollectUsableActionTypes();
-            LoadLibrary();
+            LoadIdTracker();
         }
 
-        void LoadLibrary()
+        void LoadIdTracker()
         {
-            var assets = AssetDatabase.FindAssets("t:ConversationLibrary");
-            foreach (var s in assets)
+            var tracker = AssetDatabase.FindAssets("t:" + typeof (DialogIdAllocator).Name);
+            if (tracker.Length == 0) //create new
             {
-                var path = AssetDatabase.GUIDToAssetPath(s);
-                var o = AssetDatabase.LoadAssetAtPath(path, typeof (ConversationLibrary));
-                var dit = o as ConversationLibrary;
-                if (dit != null)
-                {
-                    Library = dit;
-                    break;
-                }
+                var newTracker = CreateInstance<DialogIdAllocator>();
+                AssetDatabase.CreateAsset(newTracker, "Assets/DialogSystem/Editor/IDAllocator.asset");
+                IdAllocator = newTracker;
+                return;
             }
-            if (Library == null)
+            var loadedTracker = AssetDatabase.LoadAssetAtPath<DialogIdAllocator>(tracker[0]);
+            if (loadedTracker != null)
             {
-                Debug.LogError("ConversationLibrary could not be loaded");
+                IdAllocator = loadedTracker;
+            }
+            else
+            {
+                Debug.LogError("ID allocator could not be loaded");
                 Close();
             }
         }

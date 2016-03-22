@@ -18,12 +18,8 @@ namespace DialogSystem
         public override void OnInspectorGUI()
         {
             GUI.enabled = !DialogEditor.IsOpen;
-            var lib = target as ConversationLibrary;
             EditorGUILayout.HelpBox("Conversation Library", MessageType.None);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(new GUIContent("Allow overriding old IDs",
-                "So Dialogs can get IDs that became unused. Allow this, if old IDs are not saved somewhere in a relevant context"));
-            lib.EditorAllowOverrideOldIDs = EditorGUILayout.Toggle(lib.EditorAllowOverrideOldIDs);
             GUILayout.Label("Filter:");
             var prevColor = GUI.backgroundColor;
             GUI.backgroundColor = !string.IsNullOrEmpty(_filter) ? Color.green : prevColor;
