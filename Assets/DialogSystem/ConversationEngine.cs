@@ -200,6 +200,7 @@ namespace DialogSystem
 
         static bool CheckAvailability(Dialog d, IDialogRelevantNpc npc, IDialogRelevantPlayer player, IDialogRelevantWorld worldContext)
         {
+            if (d.Requirements.Count == 0) return true;
             switch (d.RequirementMode)
             {
                 case DialogRequirementMode.And:

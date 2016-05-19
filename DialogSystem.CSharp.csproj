@@ -64,7 +64,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\DialogSystem\Actions\DialogOptionAction.cs" />
-    <Compile Include="Assets\DialogSystem\Actions\LogDialogCompleted.cs" />
     <Compile Include="Assets\DialogSystem\Conversation.cs" />
     <Compile Include="Assets\DialogSystem\ConversationEngine.cs" />
     <Compile Include="Assets\DialogSystem\DialogCollection.cs" />
@@ -76,11 +75,9 @@
     <Compile Include="Assets\DialogSystem\Localization\LocalizedString.cs" />
     <Compile Include="Assets\DialogSystem\ReadableNameAttribute.cs" />
     <Compile Include="Assets\DialogSystem\Requirements\DialogRequirement.cs" />
-    <Compile Include="Assets\DialogSystem\Requirements\RequireIntValue.cs" />
     <Compile Include="Assets\DialogSystem\Test\DialogTester.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Assets\DialogSystem\HowToExtend.txt" />
+    <Compile Include="Assets\DialogSystem\Test\LogDialogCompleted.cs" />
+    <Compile Include="Assets\DialogSystem\Test\RequireIntValue.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2015\UnityVS.CSharp.targets" />
 </Project>
