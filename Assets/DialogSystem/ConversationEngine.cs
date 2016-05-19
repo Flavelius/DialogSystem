@@ -82,21 +82,18 @@ namespace DialogSystem
                     availableTopics.Add(_conversations[i]);
                 }
             }
-            if (availableTopics.Count == 1)
+            if (availableTopics.Count == 1) //return directly
             {
-                //var title = _conversations[0].Title.GetString(language, Fallback, FallbackLanguage);
-                //var text = _conversations[0].GetText().GetString(language, Fallback, FallbackLanguage);
                 var title = GetDialogStringOrFallback(language, _conversations[0].Title.GetString, _conversations[0].ID);
                 var text = GetDialogStringOrFallback(language, _conversations[0].GetText().GetString, _conversations[0].ID);
                 return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, ConversationType.Single,
                     GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
             }
-            if (availableTopics.Count > 1)
+            if (availableTopics.Count > 1) //create list
             {
                 var answers = new List<Conversation.Answer>();
                 for (var i = 0; i < availableTopics.Count; i++)
                 {
-                    //var title = availableTopics[i].Title.GetString(language, Fallback, FallbackLanguage);
                     var title = GetDialogStringOrFallback(language, availableTopics[i].Title.GetString, availableTopics[i].ID);
                     var ca = new Conversation.Answer(availableTopics[i].ID, title, availableTopics[i].Tag);
                     answers.Add(ca);
@@ -124,7 +121,7 @@ namespace DialogSystem
                 return null;
             }
             Dialog activeDialog;
-            if (previous.ID == -1)
+            if (previous.ID == -1) //from list return selected
             {
                 activeDialog = GetDialog(answer.Index);
                 if (activeDialog == null || !CheckAvailability(activeDialog, npc, player, worldContext))
@@ -132,8 +129,6 @@ namespace DialogSystem
                     Debug.LogWarning("Selection from topicList invalid");
                     return null;
                 }
-                //var title = activeDialog.Title.GetString(language, Fallback, FallbackLanguage);
-                //var text = activeDialog.GetText().GetString(language, Fallback, FallbackLanguage);
                 var title = GetDialogStringOrFallback(language, activeDialog.Title.GetString, activeDialog.ID);
                 var text = GetDialogStringOrFallback(language, activeDialog.GetText().GetString, activeDialog.ID);
                 return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, ConversationType.Single,
@@ -154,8 +149,6 @@ namespace DialogSystem
                 if (chosenOption.NextDialog == null) return null;
                 if (chosenOption.IgnoreRequirements || CheckAvailability(chosenOption.NextDialog, npc, player, worldContext))
                 {
-                    //var title = chosenOption.NextDialog.Title.GetString(language, Fallback, FallbackLanguage);
-                    //var text = chosenOption.NextDialog.GetText().GetString(language, Fallback, FallbackLanguage);
                     var title = GetDialogStringOrFallback(language, chosenOption.NextDialog.Title.GetString, chosenOption.NextDialog.ID);
                     var text = GetDialogStringOrFallback(language, chosenOption.NextDialog.GetText().GetString, chosenOption.NextDialog.ID);
                     return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, ConversationType.Single,
@@ -164,10 +157,10 @@ namespace DialogSystem
             }
             else
             {
-                if (answer.Index == -1)
+                if (answer.Index < 0) //dialog end
                 {
                     return null;
-                } //close dialog
+                } 
                 Debug.LogWarning("AnswerIndex out of bounds");
             }
             return null;
@@ -238,13 +231,11 @@ namespace DialogSystem
             {
                 if (d.Options[i].NextDialog == null)
                 {
-                    //var text = d.Options[i].Text.GetString(language, Fallback, FallbackLanguage);
                     var text = GetDialogStringOrFallback(language, d.Options[i].Text.GetString, d.ID);
                     answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
                 }
                 else if (CheckAvailability(d.Options[i].NextDialog, npc, player, worldContext))
                 {
-                    //var text = d.Options[i].Text.GetString(language, Fallback, FallbackLanguage);
                     var text = GetDialogStringOrFallback(language, d.Options[i].Text.GetString, d.ID);
                     answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
                 }
@@ -272,6 +263,7 @@ namespace DialogSystem
                         return txt;
                     }
                     goto default;
+                    // ReSharper disable once RedundantCaseLabel
                 case LocalizationFallback.DebugOutput:
                 default:
                     return string.Format(DebugStringFormat, referenceID);

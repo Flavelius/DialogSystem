@@ -2,6 +2,7 @@
 
 namespace DialogSystem.Requirements
 {
+    //This is an example requirement
     [ReadableName("Player Int Value")]
     public class RequireIntValue: DialogRequirement
     {

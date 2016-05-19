@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace DialogSystem.Actions
 {
+    //This is an example action
     [ReadableName("player Log dialog completed")]
     public class LogDialogCompleted: DialogOptionAction
     {

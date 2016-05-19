@@ -50,11 +50,6 @@ namespace DialogSystem
             Type = type;
         }
 
-        //public static Conversation Create(int id, string title, string text, string tag, ConversationType type, List<Answer> answers)
-        //{
-        //    return new Conversation(id, title, text, tag, type, answers);
-        //}
-
         public class Answer
         {
             public readonly int Index;
