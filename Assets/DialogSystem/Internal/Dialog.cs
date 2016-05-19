@@ -57,7 +57,7 @@ namespace DialogSystem.Internal
 
         public LocalizedString GetText()
         {
-            return Texts.Count == 0 ? LocalizedString.Empty : Texts[Random.Range(0, Texts.Count - 1)];
+            return Texts.Count == 0 ? LocalizedString.Empty : Texts[Random.Range(0, Texts.Count)];
         }
     }
 }

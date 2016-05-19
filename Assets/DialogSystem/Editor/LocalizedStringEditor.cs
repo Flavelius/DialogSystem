@@ -4,6 +4,7 @@ using DialogSystem.Localization;
 using UnityEditor;
 using UnityEngine;
 
+// ReSharper disable once CheckNamespace
 namespace DialogSystem
 {
     public class LocalizedStringEditor

@@ -9,7 +9,12 @@ namespace DialogSystem
     public class ConversationEngine : MonoBehaviour
     {
         /// <summary>
-        ///     all loaded conversations are stored here
+        /// Format of the DebugOutput fallback if a dialog text is not available
+        /// </summary>
+        const string DebugStringFormat = "No Text: {0}";
+
+        /// <summary>
+        ///     All loaded conversations are stored here
         /// </summary>
         [NonSerialized] List<Dialog> _conversations = new List<Dialog>();
 
@@ -79,8 +84,10 @@ namespace DialogSystem
             }
             if (availableTopics.Count == 1)
             {
-                var title = _conversations[0].Title.GetString(language, Fallback, FallbackLanguage);
-                var text = _conversations[0].GetText().GetString(language, Fallback, FallbackLanguage);
+                //var title = _conversations[0].Title.GetString(language, Fallback, FallbackLanguage);
+                //var text = _conversations[0].GetText().GetString(language, Fallback, FallbackLanguage);
+                var title = GetDialogStringOrFallback(language, _conversations[0].Title.GetString, _conversations[0].ID);
+                var text = GetDialogStringOrFallback(language, _conversations[0].GetText().GetString, _conversations[0].ID);
                 return new Conversation(availableTopics[0].ID, title, text, availableTopics[0].Tag, ConversationType.Single,
                     GetAvailableAnswers(availableTopics[0], npc, player, worldContext, language));
             }
@@ -89,7 +96,8 @@ namespace DialogSystem
                 var answers = new List<Conversation.Answer>();
                 for (var i = 0; i < availableTopics.Count; i++)
                 {
-                    var title = availableTopics[i].Title.GetString(language, Fallback, FallbackLanguage);
+                    //var title = availableTopics[i].Title.GetString(language, Fallback, FallbackLanguage);
+                    var title = GetDialogStringOrFallback(language, availableTopics[i].Title.GetString, availableTopics[i].ID);
                     var ca = new Conversation.Answer(availableTopics[i].ID, title, availableTopics[i].Tag);
                     answers.Add(ca);
                 }
@@ -124,8 +132,10 @@ namespace DialogSystem
                     Debug.LogWarning("Selection from topicList invalid");
                     return null;
                 }
-                var title = activeDialog.Title.GetString(language, Fallback, FallbackLanguage);
-                var text = activeDialog.GetText().GetString(language, Fallback, FallbackLanguage);
+                //var title = activeDialog.Title.GetString(language, Fallback, FallbackLanguage);
+                //var text = activeDialog.GetText().GetString(language, Fallback, FallbackLanguage);
+                var title = GetDialogStringOrFallback(language, activeDialog.Title.GetString, activeDialog.ID);
+                var text = GetDialogStringOrFallback(language, activeDialog.GetText().GetString, activeDialog.ID);
                 return new Conversation(activeDialog.ID, title, text, activeDialog.Tag, ConversationType.Single,
                     GetAvailableAnswers(activeDialog, npc, player, worldContext, language));
             }
@@ -144,8 +154,10 @@ namespace DialogSystem
                 if (chosenOption.NextDialog == null) return null;
                 if (chosenOption.IgnoreRequirements || CheckAvailability(chosenOption.NextDialog, npc, player, worldContext))
                 {
-                    var title = chosenOption.NextDialog.Title.GetString(language, Fallback, FallbackLanguage);
-                    var text = chosenOption.NextDialog.GetText().GetString(language, Fallback, FallbackLanguage);
+                    //var title = chosenOption.NextDialog.Title.GetString(language, Fallback, FallbackLanguage);
+                    //var text = chosenOption.NextDialog.GetText().GetString(language, Fallback, FallbackLanguage);
+                    var title = GetDialogStringOrFallback(language, chosenOption.NextDialog.Title.GetString, chosenOption.NextDialog.ID);
+                    var text = GetDialogStringOrFallback(language, chosenOption.NextDialog.GetText().GetString, chosenOption.NextDialog.ID);
                     return new Conversation(chosenOption.NextDialog.ID, title, text, chosenOption.NextDialog.Tag, ConversationType.Single,
                         GetAvailableAnswers(chosenOption.NextDialog, npc, player, worldContext, language));
                 }
@@ -226,20 +238,46 @@ namespace DialogSystem
             {
                 if (d.Options[i].NextDialog == null)
                 {
-                    var text = d.Options[i].Text.GetString(language, Fallback, FallbackLanguage);
+                    //var text = d.Options[i].Text.GetString(language, Fallback, FallbackLanguage);
+                    var text = GetDialogStringOrFallback(language, d.Options[i].Text.GetString, d.ID);
                     answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
                 }
                 else if (CheckAvailability(d.Options[i].NextDialog, npc, player, worldContext))
                 {
-                    var text = d.Options[i].Text.GetString(language, Fallback, FallbackLanguage);
+                    //var text = d.Options[i].Text.GetString(language, Fallback, FallbackLanguage);
+                    var text = GetDialogStringOrFallback(language, d.Options[i].Text.GetString, d.ID);
                     answers.Add(new Conversation.Answer(i, text, d.Options[i].Tag));
                 }
             }
             if (answers.Count == 0 && UseEndConversationfallback)
             {
-                answers.Add(new Conversation.Answer(-1, _endConversationFallback.GetString(language, Fallback, FallbackLanguage), ""));
+                var txt = GetDialogStringOrFallback(language, _endConversationFallback.GetString, -1);
+                answers.Add(new Conversation.Answer(-1, txt, ""));
             }
             return answers;
+        }
+
+        string GetDialogStringOrFallback(DialogLanguage lang, LocalizedString.LocalizedStringDelegate getString, int referenceID)
+        {
+            string txt;
+            if (getString(lang, out txt))
+            {
+                return txt;
+            }
+            switch (Fallback)
+            {
+                case LocalizationFallback.Language:
+                    if (getString(FallbackLanguage, out txt))
+                    {
+                        return txt;
+                    }
+                    goto default;
+                case LocalizationFallback.DebugOutput:
+                default:
+                    return string.Format(DebugStringFormat, referenceID);
+                case LocalizationFallback.EmptyString:
+                    return string.Empty;
+            }
         }
     }
 

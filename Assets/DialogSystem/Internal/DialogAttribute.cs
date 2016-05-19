@@ -37,10 +37,11 @@ namespace DialogSystem.Internal
             return false;
         }
 
+        // ReSharper disable once UnusedMember.Local
         void OnEnable()
         {
             var rns = GetType().GetCustomAttributes(typeof(ReadableNameAttribute), false) as ReadableNameAttribute[];
-            if (rns.Length > 0)
+            if (rns != null && rns.Length > 0)
             {
                 _cachedName = rns[0].Name;
             }

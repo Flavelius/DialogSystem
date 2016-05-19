@@ -3,6 +3,7 @@ using DialogSystem.Localization;
 using UnityEditor;
 using UnityEngine;
 
+// ReSharper disable once CheckNamespace
 namespace DialogSystem
 {
     [CustomEditor(typeof (ConversationEngine))]
@@ -13,6 +14,7 @@ namespace DialogSystem
         public override void OnInspectorGUI()
         {
             var engine = target as ConversationEngine;
+            if (!engine) return;
             var dialogs = serializedObject.FindProperty("_savedDialogs");
             if (dialogs == null)
             {

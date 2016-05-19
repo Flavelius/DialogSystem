@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-using System.Collections;
-using System;
+﻿using System;
 
 namespace DialogSystem
 {
@@ -10,7 +8,7 @@ namespace DialogSystem
 
         public ReadableNameAttribute(string name)
         {
-            this.Name = name;
+            Name = name;
         }
     }
 }

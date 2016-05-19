@@ -24,32 +24,46 @@ namespace DialogSystem.Localization
             get { return _strings; }
         }
 
-        public string GetString(DialogLanguage lang, LocalizationFallback fallback, DialogLanguage fallbackLanguage = DialogLanguage.EN_Default)
+        public delegate bool LocalizedStringDelegate(DialogLanguage lang, out string text);
+
+        public bool GetString(DialogLanguage lang, out string text)
         {
             for (var i = 0; i < Strings.Count; i++)
             {
-                if (Strings[i].language == lang)
-                {
-                    return Strings[i].Text;
-                }
+                if (Strings[i].language != lang) continue;
+                text = Strings[i].Text;
+                return true;
             }
-            switch (fallback)
-            {
-                case LocalizationFallback.Language:
-                    for (var i = 0; i < Strings.Count; i++)
-                    {
-                        if (Strings[i].language == fallbackLanguage)
-                        {
-                            return Strings[i].Text;
-                        }
-                    }
-                    goto default;
-                case LocalizationFallback.EmptyString:
-                    return "";
-                default:
-                    return string.Format("LocalizedString not found: {0}", Description);
-            }
+            text = string.Empty;
+            return false;
         }
+
+        //public string GetString(DialogLanguage lang, LocalizationFallback fallback, DialogLanguage fallbackLanguage = DialogLanguage.EN_Default)
+        //{
+        //    for (var i = 0; i < Strings.Count; i++)
+        //    {
+        //        if (Strings[i].language == lang)
+        //        {
+        //            return Strings[i].Text;
+        //        }
+        //    }
+        //    switch (fallback)
+        //    {
+        //        case LocalizationFallback.Language:
+        //            for (var i = 0; i < Strings.Count; i++)
+        //            {
+        //                if (Strings[i].language == fallbackLanguage)
+        //                {
+        //                    return Strings[i].Text;
+        //                }
+        //            }
+        //            goto default;
+        //        case LocalizationFallback.EmptyString:
+        //            return "";
+        //        default:
+        //            return string.Format("LocalizedString not found: {0}", Description);
+        //    }
+        //}
 
         [Serializable]
         public class LanguageString

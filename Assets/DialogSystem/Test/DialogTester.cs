@@ -23,7 +23,7 @@ namespace DialogSystem.Test
         {
             if (_activeConversation == null)
             {
-                if (GUILayout.Button("Get Dialog"))
+                if (GUILayout.Button("Start Conversation"))
                 {
                     _activeConversation = DialogEngine.GetAvailableTopics(_npc, _player, _world, Language);
                 }

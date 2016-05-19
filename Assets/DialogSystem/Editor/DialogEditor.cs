@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using DialogSystem.Actions;
@@ -9,6 +10,7 @@ using DialogSystem.Requirements;
 using UnityEditor;
 using UnityEngine;
 
+// ReSharper disable once CheckNamespace
 namespace DialogSystem
 {
     public class DialogEditor : EditorWindow
@@ -49,7 +51,7 @@ namespace DialogSystem
         public DialogCollection SourceCollection;
         public DialogIdAllocator IdAllocator;
 
-        public static bool IsOpen = false;
+        public static bool IsOpen;
 
         int GetUniqueId()
         {
@@ -148,15 +150,20 @@ namespace DialogSystem
 
         void LoadIdTracker()
         {
-            var tracker = AssetDatabase.FindAssets("t:" + typeof (DialogIdAllocator).Name);
-            if (tracker.Length == 0) //create new
+            var dIAName = typeof(DialogIdAllocator).Name;
+            var existingAssets = AssetDatabase.FindAssets("t:" + dIAName);
+            if (existingAssets.Length == 0)
             {
+                Debug.Log("ID-Tracker not found, creating new one, free Dialog ID search will start from 0");
                 var newTracker = CreateInstance<DialogIdAllocator>();
-                AssetDatabase.CreateAsset(newTracker, "Assets/DialogSystem/Editor/IDAllocator.asset");
+                var script = MonoScript.FromScriptableObject(this);
+                var path = AssetDatabase.GetAssetPath(script);
+                path = path.Replace(Path.GetFileName(path), string.Empty) + "IDAllocator.asset";
+                AssetDatabase.CreateAsset(newTracker, path);
                 IdAllocator = newTracker;
                 return;
             }
-            var loadedTracker = AssetDatabase.LoadAssetAtPath<DialogIdAllocator>(tracker[0]);
+            var loadedTracker = AssetDatabase.LoadAssetAtPath<DialogIdAllocator>(AssetDatabase.GUIDToAssetPath(existingAssets[0]));
             if (loadedTracker != null)
             {
                 IdAllocator = loadedTracker;
@@ -168,6 +175,7 @@ namespace DialogSystem
             }
         }
 
+        // ReSharper disable once UnusedMember.Local
         void OnEnable()
         {
             CollectUsableActionTypes();
@@ -194,6 +202,7 @@ namespace DialogSystem
             _activeStringEditor = null;
         }
 
+        // ReSharper disable once UnusedMember.Local
         void OnGUI()
         {
             if (SourceCollection == null)
@@ -235,6 +244,7 @@ namespace DialogSystem
             }
         }
 
+        // ReSharper disable once UnusedMember.Local
         void Update()
         {
             if (SourceCollection == null)
@@ -244,6 +254,7 @@ namespace DialogSystem
             }
         }
 
+        // ReSharper disable once UnusedMember.Local
         void OnDestroy()
         {
             Cleanup();
@@ -462,21 +473,10 @@ namespace DialogSystem
                 {
                     GUI.color = Color.gray;
                 }
-                var dTitle = SourceCollection.Dialogs[i].Title.Description;
-                if (string.IsNullOrEmpty(dTitle))
-                {
-                    dTitle = TxtNotSetMsg;
-                }
+                var dTitle = GetFormattedTitleString(SourceCollection.Dialogs[i].Title.Description, SourceCollection.Dialogs[i].Title.GetString, 30);
                 if (GUI.Button(itemRect, dTitle, "ButtonLeft"))
                 {
-                    if (_activeDialog == SourceCollection.Dialogs[i])
-                    {
-                        _activeDialog = null;
-                    }
-                    else
-                    {
-                        _activeDialog = SourceCollection.Dialogs[i];
-                    }
+                    _activeDialog = _activeDialog == SourceCollection.Dialogs[i] ? null : SourceCollection.Dialogs[i];
                 }
                 GUI.color = Color.white;
                 if (GUI.Button(deleteItemRect, "x", "ButtonRight"))
@@ -621,22 +621,7 @@ namespace DialogSystem
                 _countedWidth = rect.x + rect.width;
             }
             var ret = 0;
-            var tTitle = option.Text.Description;
-            if (string.IsNullOrEmpty(tTitle))
-            {
-                tTitle = option.Text.GetString(DialogLanguage.EN_Default, LocalizationFallback.EmptyString);
-                if (string.IsNullOrEmpty(tTitle))
-                {
-                    tTitle = TxtNotSetMsg;
-                }
-                else
-                {
-                    if (tTitle.Length > 50)
-                    {
-                        tTitle = string.Format("{0}[..]", tTitle.Substring(0, 50));
-                    }
-                }
-            }
+            var tTitle = GetFormattedTitleString(option.Text.Description, option.Text.GetString, 55);
             if (GUI.Button(rect, tTitle, gs))
             {
                 InspectOptionNode(option);
@@ -758,11 +743,7 @@ namespace DialogSystem
             GUILayout.Label("Text", _headerStyle);
             GUILayout.Space(5);
             GUILayout.BeginHorizontal();
-            var tText = dOption.Text.Description;
-            if (string.IsNullOrEmpty(tText))
-            {
-                tText = TxtNotSetMsg;
-            }
+            var tText = GetFormattedTitleString(dOption.Text.Description, dOption.Text.GetString);
             GUILayout.Label(tText, _lblStyle, GUILayout.MaxWidth(154));
             if (GUILayout.Button("Edit", _buttonStyle, GUILayout.Width(40)))
             {
@@ -795,11 +776,7 @@ namespace DialogSystem
                 {
                     continue;
                 }
-                var dTitle = ddialogs[i].Title.Description;
-                if (string.IsNullOrEmpty(dTitle))
-                {
-                    dTitle = TxtNotSetMsg;
-                }
+                var dTitle = GetFormattedTitleString(ddialogs[i].Title.Description, ddialogs[i].Title.GetString);
                 if (GUILayout.Button(dTitle, _buttonStyle))
                 {
                     dOption.NextDialog = ddialogs[i];
@@ -851,7 +828,6 @@ namespace DialogSystem
             GUILayout.EndScrollView();
             if (GUILayout.Button("Close", _buttonStyle))
             {
-                //RemoveDuplicateNotifications(dOption.Actions);
                 CloseSubInspector();
             }
             GUILayout.EndArea();
@@ -886,29 +862,6 @@ namespace DialogSystem
             return ret;
         }
 
-        void RemoveDuplicateActions(List<DialogOptionAction> sourceList)
-        {
-            var cleanList = new List<DialogOptionAction>();
-            for (var i = 0; i < sourceList.Count; i++)
-            {
-                var found = false;
-                for (var cl = 0; cl < cleanList.Count; cl++)
-                {
-                    if (cleanList[cl].GetType() == sourceList[i].GetType())
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    cleanList.Add(sourceList[i]);
-                }
-            }
-            sourceList.Clear();
-            sourceList.AddRange(cleanList);
-        }
-
         void DisplayDialogNodeInspector(Rect r, Dialog d)
         {
             var prev = GUI.color;
@@ -919,11 +872,7 @@ namespace DialogSystem
             GUILayout.Label("Title", _headerStyle);
             GUILayout.Space(5);
             GUILayout.BeginHorizontal();
-            var dTitle = d.Title.Description;
-            if (string.IsNullOrEmpty(dTitle))
-            {
-                dTitle = TxtNotSetMsg;
-            }
+            var dTitle = GetFormattedTitleString(d.Title.Description, d.Title.GetString);
             GUILayout.Label(dTitle, _lblStyle, GUILayout.MaxWidth(154));
             if (GUILayout.Button("Edit", _buttonStyle, GUILayout.Width(40)))
             {
@@ -935,11 +884,7 @@ namespace DialogSystem
             GUILayout.Space(5);
             for (var i = 0; i < d.Texts.Count; i++)
             {
-                var dtextsT = d.Texts[i].Description;
-                if (string.IsNullOrEmpty(dtextsT))
-                {
-                    dtextsT = TxtNotSetMsg;
-                }
+                var dtextsT = GetFormattedTitleString(d.Texts[i].Description, d.Texts[i].GetString, 22);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(dtextsT, _lblStyle, GUILayout.MaxWidth(134));
                 if (GUILayout.Button("Edit", _buttonStyle, GUILayout.Width(40)))
@@ -1010,33 +955,9 @@ namespace DialogSystem
             GUILayout.EndScrollView();
             if (GUILayout.Button("Close", _buttonStyle))
             {
-                //RemoveDuplicateRequirements(d.Requirements);
                 CloseSubInspector();
             }
             GUILayout.EndArea();
-        }
-
-        void RemoveDuplicateRequirements(List<DialogRequirement> sourceList)
-        {
-            var cleanList = new List<DialogRequirement>();
-            for (var i = 0; i < sourceList.Count; i++)
-            {
-                var found = false;
-                for (var cl = 0; cl < cleanList.Count; cl++)
-                {
-                    if (cleanList[cl].GetType() == sourceList[i].GetType())
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    cleanList.Add(sourceList[i]);
-                }
-            }
-            sourceList.Clear();
-            sourceList.AddRange(cleanList);
         }
 
         bool DrawInlineRequirement(DialogRequirement dr)
@@ -1072,11 +993,7 @@ namespace DialogSystem
         {
             var prev = GUI.color;
             GUI.color = Color.yellow;
-            var ndTitle = dOption.NextDialog.Title.Description;
-            if (string.IsNullOrEmpty(ndTitle))
-            {
-                ndTitle = TxtNotSetMsg;
-            }
+            var ndTitle = GetFormattedTitleString(dOption.NextDialog.Title.Description, dOption.NextDialog.Title.GetString);
             ndTitle = string.Format("({0}) {1}", dOption.NextDialog.ID, ndTitle);
             if (GUI.Button(new Rect(r.x, r.y + 5, r.width, r.height - 5), "Loop: " + ndTitle))
             {
@@ -1104,11 +1021,7 @@ namespace DialogSystem
             {
                 _countedWidth = rect.x + rect.width;
             }
-            var dTitle = d.Title.Description;
-            if (string.IsNullOrEmpty(dTitle))
-            {
-                dTitle = TxtNotSetMsg;
-            }
+            var dTitle = GetFormattedTitleString(d.Title.Description, d.Title.GetString);
             dTitle = string.Format("({0}) {1}", d.ID, dTitle);
             if (GUI.Button(rect, dTitle))
             {
@@ -1131,6 +1044,25 @@ namespace DialogSystem
                 }
             }
             return dl;
+        }
+
+        string GetFormattedTitleString(string baseText, LocalizedString.LocalizedStringDelegate retriever, int lengthLimit = 25)
+        {
+            if (!string.IsNullOrEmpty(baseText))
+            {
+                return baseText;
+            }
+            foreach (var value in Enum.GetValues(typeof(DialogLanguage)))
+            {
+                string txt;
+                if (!retriever((DialogLanguage) value, out txt)) continue;
+                if (txt.Length > lengthLimit)
+                {
+                    txt = string.Format("{0}..", txt.Substring(0, lengthLimit - 4));
+                }
+                return txt;
+            }
+            return TxtNotSetMsg;
         }
     }
 }

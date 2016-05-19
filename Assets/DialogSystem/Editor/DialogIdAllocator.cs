@@ -2,13 +2,16 @@
 using UnityEditor;
 using UnityEngine;
 
+// ReSharper disable once CheckNamespace
 namespace DialogSystem.Internal
 {
     public class DialogIdAllocator: ScriptableObject
     {
         [SerializeField, HideInInspector] int _lastUsedDialogId;
 
+        //if id's are saved somewhere and represent progress, resetting can lead to unexpected results
         [ContextMenu("Reset ID search to start from 0 (use with care!)")]
+        // ReSharper disable once UnusedMember.Local
         void ResetCounter()
         {
             _lastUsedDialogId = 0;
@@ -16,26 +19,23 @@ namespace DialogSystem.Internal
 
         public int GetNewId(DialogCollection collection)
         {
-            var libraries = new List<ConversationLibrary>();
-            var allLibraries = AssetDatabase.FindAssets("t:" + typeof(ConversationLibrary).Name);
-            for (var i = 0; i < allLibraries.Length; i++)
+            var collections = new List<DialogCollection>();
+            var foundAssets = AssetDatabase.FindAssets("t:" + typeof(DialogCollection).Name);
+            for (var i = 0; i < foundAssets.Length; i++)
             {
-                var lib = AssetDatabase.LoadAssetAtPath<ConversationLibrary>(allLibraries[i]);
+                var lib = AssetDatabase.LoadAssetAtPath<DialogCollection>(AssetDatabase.GUIDToAssetPath(foundAssets[i]));
                 if (lib != null)
                 {
-                    libraries.Add(lib);
+                    collections.Add(lib);
                 }
             }
             var usedIDs = new HashSet<int>();
-            foreach (var library in libraries)
+            foreach (var library in collections)
             {
-                for (var i = library.EditorGetCollections().Count; i-- > 0;)
+                var ids = library.GetUsedIds();
+                foreach (var id in ids)
                 {
-                    var ids = library.EditorGetCollections()[i].GetUsedIds();
-                    foreach (var id in ids)
-                    {
-                        usedIDs.Add(id);
-                    }
+                    usedIDs.Add(id);
                 }
             } 
             var freeId = _lastUsedDialogId;

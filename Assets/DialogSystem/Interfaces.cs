@@ -2,6 +2,7 @@
 {
     public interface IDialogRelevantPlayer
     {
+        //these are example methods
         int GetIntValue();
         void OnDialogCompleted(int id);
     }
